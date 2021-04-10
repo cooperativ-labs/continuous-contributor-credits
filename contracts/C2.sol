@@ -14,10 +14,7 @@ contract C2 is ERC20, Ownable {
 
     bool public isEstablished = false;
     modifier isLive() {
-        require(
-            isEstablished == true,
-            "token must be established before use"
-        );
+        require(isEstablished == true, "token must be established before use");
         _;
     }
     modifier isNotLive() {
@@ -27,8 +24,9 @@ contract C2 is ERC20, Ownable {
 
     bytes32 public agreementHash;
 
-    constructor() public ERC20("ContributorCredits", "C^2") {
-    }
+    uint256 public totalAmountFunded = 0;
+
+    constructor() public ERC20("ContributorCredits", "C^2") {}
 
     function establish(ERC20 backingTokenAddress, bytes32 agreement)
         public
@@ -107,13 +105,19 @@ contract C2 is ERC20, Ownable {
         if (totalSupply() == 0) {
             return 0;
         }
-        
+
         // decimals normalization
         if (decimals() > backingToken.decimals()) {
             // ceiling division
-            return (totalSupply().sub(1)).div(uint256(10) ** (decimals() - backingToken.decimals())).add(1);
+            return
+                (totalSupply().sub(1))
+                    .div(uint256(10)**(decimals() - backingToken.decimals()))
+                    .add(1);
         } else {
-            return totalSupply().mul(uint256(10) ** (backingToken.decimals() - decimals()));
+            return
+                totalSupply().mul(
+                    uint256(10)**(backingToken.decimals() - decimals())
+                );
         }
     }
 
@@ -121,7 +125,9 @@ contract C2 is ERC20, Ownable {
         return bacBalance() >= totalBackingNeededToFund();
     }
 
-    // TODO: fund function
-    // TODO: fund function checks for extra funds (OPTIONAL)
-
+    function fund(uint256 amount) public isLive {
+        // TODO: fund function checks for extra funds (OPTIONAL)
+        backingToken.transferFrom(_msgSender(), address(this), amount);
+        totalAmountFunded += amount;
+    }
 }

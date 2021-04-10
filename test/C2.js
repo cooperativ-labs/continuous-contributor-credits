@@ -84,7 +84,7 @@ function testStakingRatio(establishBac, establishC2) {
 
     it("Can access version string", async () => {
       const version = await this.c2.version.call();
-      assert.equal(version, "cc v0.1.3");
+      assert.equal(version, "cc v0.2.0");
     });
 
     it("can retrieve backing token address", async () => {

@@ -7,7 +7,7 @@ import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract C2 is ERC20, Ownable {
-    string public constant version = "cc v0.1.3";
+    string public constant version = "cc v0.2.0";
 
     ERC20 public backingToken;
     using SafeMath for uint256;
@@ -47,11 +47,16 @@ contract C2 is ERC20, Ownable {
     );
 
     function issue(address account, uint256 amount) public onlyOwner isLive {
+        // TODO: Don't allow issue when fully funded
+        // TODO: Don't allow when locked
         uint256 backingNeeded = backingNeededFor(amount);
         _mint(account, amount);
         backingToken.transferFrom(_msgSender(), address(this), backingNeeded);
         emit Issued(account, amount, backingNeeded);
     }
+
+    // TODO: Lock function
+    // Automatically lock when fully funded
 
     event Burned(
         address indexed account,
@@ -60,6 +65,9 @@ contract C2 is ERC20, Ownable {
     );
 
     function burn(uint256 amount) public isLive {
+        // TODO: Only allow burning down to amount withdrawn
+        // Think about this more, logic may be complicated
+        // What happens to funding ratio
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
         backingToken.transfer(this.owner(), associatedBacking);
@@ -73,6 +81,9 @@ contract C2 is ERC20, Ownable {
     );
 
     function cashout(uint256 amount) public isLive {
+        // TODO: always all available funds withdraw
+        // TODO: update memory values, don't actually delete tokens
+        // TODO: make sure that only withdraw upto amount available, don't allow if amountAvailable is < amountWithdrawn
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
         backingToken.transfer(_msgSender(), associatedBacking);
@@ -109,4 +120,8 @@ contract C2 is ERC20, Ownable {
     function isFunded() public view returns (bool) {
         return bacBalance() >= totalBackingNeededToFund();
     }
+
+    // TODO: fund function
+    // TODO: fund function checks for extra funds (OPTIONAL)
+
 }

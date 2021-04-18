@@ -26,6 +26,8 @@ contract C2 is ERC20, Ownable {
 
     uint256 public totalAmountFunded = 0;
 
+    mapping(address => uint256) public amountWithdrawn;
+
     constructor() public ERC20("ContributorCredits", "C^2") {}
 
     function establish(ERC20 backingTokenAddress, bytes32 agreement)

@@ -40,10 +40,7 @@ contract C2 is ERC20, Ownable {
         isEstablished = true;
     }
 
-    event Issued(
-        address indexed account,
-        uint256 c2Issued
-    );
+    event Issued(address indexed account, uint256 c2Issued);
 
     function issue(address account, uint256 amount) public onlyOwner isLive {
         // TODO: Don't allow issue when fully funded
@@ -55,10 +52,7 @@ contract C2 is ERC20, Ownable {
     // TODO: Lock function
     // Automatically lock when fully funded
 
-    event Burned(
-        address indexed account,
-        uint256 c2Burned
-    );
+    event Burned(address indexed account, uint256 c2Burned);
 
     function burn(uint256 amount) public isLive {
         // TODO: Only allow burning down to amount withdrawn
@@ -70,17 +64,15 @@ contract C2 is ERC20, Ownable {
         emit Burned(_msgSender(), amount);
     }
 
-    event CashedOut(
-        address indexed account,
-        uint256 bacReceived
-    );
+    event CashedOut(address indexed account, uint256 bacReceived);
 
     function cashout() public isLive {
         // TODO: always all available funds withdraw
         // TODO: update memory values, don't actually delete tokens
         // TODO: make sure that only withdraw upto amount available, don't allow if amountAvailable is < amountWithdrawn
         uint256 alreadyWithdrawn = amountWithdrawn[_msgSender()];
-        uint256 eligibleWithdrawal = balanceOf(_msgSender()).mul(totalAmountFunded).div(totalSupply()); // TODO: account for decimal differences
+        uint256 eligibleWithdrawal =
+            balanceOf(_msgSender()).mul(totalAmountFunded).div(totalSupply()); // TODO: account for decimal differences
         uint256 amountToCashout = eligibleWithdrawal - alreadyWithdrawn;
         amountWithdrawn[_msgSender()] += amountToCashout;
         backingToken.transfer(_msgSender(), amountToCashout);
@@ -106,7 +98,7 @@ contract C2 is ERC20, Ownable {
         if (balanceOf(c2Holder) == 0) {
             return 0;
         }
-        
+
         // tokens owned * proportion funded
         // proportion funded = totalAmountFunded / totalBackingNeededToFund
     }

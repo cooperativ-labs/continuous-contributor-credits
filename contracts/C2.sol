@@ -80,10 +80,13 @@ contract C2 is ERC20, Ownable {
         uint256 backingReceived
     );
 
-    function cashout(uint256 amount) public isLive {
+    function cashout() public isLive {
         // TODO: always all available funds withdraw
         // TODO: update memory values, don't actually delete tokens
         // TODO: make sure that only withdraw upto amount available, don't allow if amountAvailable is < amountWithdrawn
+        uint256 alreadyWithdrawn = amountWithdrawn[_msgSender()];
+        uint256 eligibleWithdrawal = balanceOf(_msgSender()).mul(totalSupply()).div();
+        uint256 amountToCashout = eligibleWithdrawal - alreadyWithdrawn;
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
         backingToken.transfer(_msgSender(), associatedBacking);
@@ -101,6 +104,15 @@ contract C2 is ERC20, Ownable {
 
         // The -1 +1 is to get the ceiling division, rather than the floor so that you always err on the side of having more backing
         return amountC2.mul(bacBalance()).sub(1).div(totalSupply()).add(1);
+    }
+
+    function totalAmountPaidTo(address c2Holder) public view returns (uint256) {
+        if (balanceOf(c2Holder) == 0) {
+            return 0;
+        }
+        
+        // tokens owned * proportion funded
+        // proportion funded = totalAmountFunded / totalBackingNeededToFund
     }
 
     function totalBackingNeededToFund() public view returns (uint256) {

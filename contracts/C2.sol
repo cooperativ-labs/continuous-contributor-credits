@@ -26,6 +26,8 @@ contract C2 is ERC20, Ownable {
 
     uint256 public totalAmountFunded = 0;
 
+    mapping(address => uint256) public amountWithdrawn;
+
     constructor() public ERC20("ContributorCredits", "C^2") {}
 
     function establish(ERC20 backingTokenAddress, bytes32 agreement)
@@ -40,17 +42,14 @@ contract C2 is ERC20, Ownable {
 
     event Issued(
         address indexed account,
-        uint256 c2Issued,
-        uint256 backingAmount
+        uint256 c2Issued
     );
 
     function issue(address account, uint256 amount) public onlyOwner isLive {
         // TODO: Don't allow issue when fully funded
         // TODO: Don't allow when locked
-        uint256 backingNeeded = backingNeededFor(amount);
         _mint(account, amount);
-        backingToken.transferFrom(_msgSender(), address(this), backingNeeded);
-        emit Issued(account, amount, backingNeeded);
+        emit Issued(account, amount);
     }
 
     // TODO: Lock function
@@ -74,19 +73,22 @@ contract C2 is ERC20, Ownable {
 
     event CashedOut(
         address indexed account,
-        uint256 c2Exchanged,
         uint256 backingReceived
     );
 
-    function cashout(uint256 amount) public isLive {
+    function cashout() public isLive {
         // TODO: always all available funds withdraw
         // TODO: update memory values, don't actually delete tokens
         // TODO: make sure that only withdraw upto amount available, don't allow if amountAvailable is < amountWithdrawn
-        uint256 associatedBacking = backingNeededFor(amount);
-        _burn(_msgSender(), amount);
-        backingToken.transfer(_msgSender(), associatedBacking);
-        emit CashedOut(_msgSender(), amount, associatedBacking);
+        uint256 alreadyWithdrawn = amountWithdrawn[_msgSender()];
+        uint256 eligibleWithdrawal = balanceOf(_msgSender()).mul(totalAmountFunded).div(totalSupply()); // TODO: account for decimal differences
+        uint256 amountToCashout = eligibleWithdrawal - alreadyWithdrawn;
+        amountWithdrawn[_msgSender()] += amountToCashout;
+        backingToken.transfer(_msgSender(), amountToCashout);
+        emit CashedOut(_msgSender(), amountToCashout);
     }
+
+    // TODO: Transfer function that handles withdrawn amount
 
     function bacBalance() public view returns (uint256) {
         return backingToken.balanceOf(address(this));
@@ -99,6 +101,15 @@ contract C2 is ERC20, Ownable {
 
         // The -1 +1 is to get the ceiling division, rather than the floor so that you always err on the side of having more backing
         return amountC2.mul(bacBalance()).sub(1).div(totalSupply()).add(1);
+    }
+
+    function totalAmountPaidTo(address c2Holder) public view returns (uint256) {
+        if (balanceOf(c2Holder) == 0) {
+            return 0;
+        }
+        
+        // tokens owned * proportion funded
+        // proportion funded = totalAmountFunded / totalBackingNeededToFund
     }
 
     function totalBackingNeededToFund() public view returns (uint256) {

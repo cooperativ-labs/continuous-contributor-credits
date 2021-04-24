@@ -57,8 +57,7 @@ contract C2 is ERC20, Ownable {
 
     event Burned(
         address indexed account,
-        uint256 c2Burned,
-        uint256 backingReturned
+        uint256 c2Burned
     );
 
     function burn(uint256 amount) public isLive {
@@ -68,12 +67,12 @@ contract C2 is ERC20, Ownable {
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
         backingToken.transfer(this.owner(), associatedBacking);
-        emit Burned(_msgSender(), amount, associatedBacking);
+        emit Burned(_msgSender(), amount);
     }
 
     event CashedOut(
         address indexed account,
-        uint256 backingReceived
+        uint256 bacReceived
     );
 
     function cashout() public isLive {
@@ -130,6 +129,10 @@ contract C2 is ERC20, Ownable {
                     uint256(10)**(backingToken.decimals() - decimals())
                 );
         }
+    }
+
+    function remainingBackingNeededToFund() public view returns (uint256) {
+        totalBackingNeededToFund().sub(totalAmountFunded);
     }
 
     function isFunded() public view returns (bool) {

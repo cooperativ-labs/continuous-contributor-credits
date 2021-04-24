@@ -63,10 +63,10 @@ contract("Unit Tests", async (acc) => {
 
     // Users withdraw tokens, should get 50% of their tokens worth of bac
     await c2.cashout({ from: acc[1]})
-    assert.equal(await getBalance(bac, acc[1]) - this.bacBal[1], 50)
+    assert.equal(await getBalance(bac, acc[1]) - this.initBac[1], 50)
 
     await c2.cashout({ from: acc[2]})
-    assert.equal(await getBalance(bac, acc[1]) - this.bacBal[1], 150)
+    assert.equal(await getBalance(bac, acc[2]) - this.initBac[2], 150)
     
     // amountWithdrawn is updated
     assert.equal(await getAmountWithdrawn(c2, acc[1]), 50)

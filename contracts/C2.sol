@@ -42,17 +42,14 @@ contract C2 is ERC20, Ownable {
 
     event Issued(
         address indexed account,
-        uint256 c2Issued,
-        uint256 backingAmount
+        uint256 c2Issued
     );
 
     function issue(address account, uint256 amount) public onlyOwner isLive {
         // TODO: Don't allow issue when fully funded
         // TODO: Don't allow when locked
-        uint256 backingNeeded = backingNeededFor(amount);
         _mint(account, amount);
-        backingToken.transferFrom(_msgSender(), address(this), backingNeeded);
-        emit Issued(account, amount, backingNeeded);
+        emit Issued(account, amount);
     }
 
     // TODO: Lock function
@@ -76,7 +73,6 @@ contract C2 is ERC20, Ownable {
 
     event CashedOut(
         address indexed account,
-        uint256 c2Exchanged,
         uint256 backingReceived
     );
 
@@ -85,13 +81,14 @@ contract C2 is ERC20, Ownable {
         // TODO: update memory values, don't actually delete tokens
         // TODO: make sure that only withdraw upto amount available, don't allow if amountAvailable is < amountWithdrawn
         uint256 alreadyWithdrawn = amountWithdrawn[_msgSender()];
-        uint256 eligibleWithdrawal = balanceOf(_msgSender()).mul(totalSupply()).div();
+        uint256 eligibleWithdrawal = balanceOf(_msgSender()).mul(totalAmountFunded).div(totalSupply()); // TODO: account for decimal differences
         uint256 amountToCashout = eligibleWithdrawal - alreadyWithdrawn;
-        uint256 associatedBacking = backingNeededFor(amount);
-        _burn(_msgSender(), amount);
-        backingToken.transfer(_msgSender(), associatedBacking);
-        emit CashedOut(_msgSender(), amount, associatedBacking);
+        amountWithdrawn[_msgSender()] += amountToCashout;
+        backingToken.transfer(_msgSender(), amountToCashout);
+        emit CashedOut(_msgSender(), amountToCashout);
     }
+
+    // TODO: Transfer function that handles withdrawn amount
 
     function bacBalance() public view returns (uint256) {
         return backingToken.balanceOf(address(this));

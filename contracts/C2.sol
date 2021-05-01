@@ -124,7 +124,7 @@ contract C2 is ERC20, Ownable {
     }
 
     function remainingBackingNeededToFund() public view returns (uint256) {
-        totalBackingNeededToFund().sub(totalAmountFunded);
+        return totalBackingNeededToFund().sub(totalAmountFunded);
     }
 
     function isFunded() public view returns (bool) {

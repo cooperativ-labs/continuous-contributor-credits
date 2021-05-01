@@ -112,14 +112,35 @@ contract("C2", async (acc) => {
     assert.isTrue(false);
   });
 
-  it.skip("reports total BAC needed to be fully funded", async () => {
-    assert.isTrue(false);
-    // issue
-    // check funded is false
-    // check amount to fund
-    // fund a bit
-    // check is funded is false
-    // check amount to fund has gone done the specified amount
+  it("reports total BAC needed to be fully funded", async () => {
+    const amountToIssue = 300000;
+
+    // Once tokens are issued, should not considered funded
+    await c2.issue(acc[1], amountToIssue)
+    assert.isFalse(await c2.isFunded.call())
+
+    const amountNeededToFund = (await c2.totalBackingNeededToFund.call()).toNumber();
+    const remainingToFund = (await c2.remainingBackingNeededToFund.call()).toNumber();
+    assert.equal(amountNeededToFund, remainingToFund);
+    assert.isAbove(amountNeededToFund, 0)
+
+    const firstFunding = Math.floor(amountNeededToFund / 10);
+    await bac.approve(c2.address, firstFunding)
+    await c2.fund(firstFunding);
+
+    const amountNeededToFund2 = (await c2.totalBackingNeededToFund.call()).toNumber();
+    const remainingToFund2 = (await c2.remainingBackingNeededToFund.call()).toNumber();
+    assert.equal(amountNeededToFund, amountNeededToFund2)
+    assert.equal(remainingToFund2, amountNeededToFund - firstFunding)
+    assert.isFalse(await c2.isFunded.call());
+
+    // Fund remaining
+    await bac.approve(c2.address, remainingToFund2)
+    await c2.fund(remainingToFund2)
+
+    assert.isTrue(await c2.isFunded.call());
+    const remainingToFund3 = (await c2.remainingBackingNeededToFund.call()).toNumber();
+    assert.equal(remainingToFund3, 0)
   });
 
   it.skip("refunds overfunding to owner", async () => {

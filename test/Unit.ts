@@ -1,12 +1,16 @@
 import { assert } from "chai";
 // @ts-ignore
-import {contract, artifacts} from "@typechain/truffle-v5/static"
+import { contract, artifacts } from "@typechain/truffle-v5/static";
 import BN from "bn.js";
-import {BackingTokenContract, BackingTokenInstance, C2Contract, C2Instance} from "../types/truffle-contracts";
+import {
+  BackingTokenContract,
+  BackingTokenInstance,
+  C2Contract,
+  C2Instance,
+} from "../types/truffle-contracts";
 import ContractInstance = Truffle.ContractInstance;
-import {AddressType} from "typechain";
-import {Burned, CashedOut, Issued} from "../types/truffle-contracts/C2";
-
+import { AddressType } from "typechain";
+import { Burned, CashedOut, Issued } from "../types/truffle-contracts/C2";
 
 const C2: C2Contract = artifacts.require("C2");
 const BAC: BackingTokenContract = artifacts.require("BackingToken");
@@ -21,17 +25,24 @@ const fail = () => {
   assert.isTrue(false);
 };
 
-type BacOrC2 = C2Instance | BackingTokenInstance
+type BacOrC2 = C2Instance | BackingTokenInstance;
 
 const getBalance = async (instance: BacOrC2, addr: string): Promise<BN> => {
   return await instance.balanceOf(addr);
 };
-const assertBalance = async (instance: BacOrC2, addr: string, amount: BN): Promise<void> => {
+const assertBalance = async (
+  instance: BacOrC2,
+  addr: string,
+  amount: BN
+): Promise<void> => {
   const bal = await getBalance(instance, addr);
   assert.isTrue(bal.eq(amount), `Balance is ${bal}, not ${amount}`);
 };
 
-const getAmountWithdrawn = async (instance: C2Instance, addr: string): Promise<BN> => {
+const getAmountWithdrawn = async (
+  instance: C2Instance,
+  addr: string
+): Promise<BN> => {
   return await instance.amountWithdrawn(addr);
 };
 
@@ -39,7 +50,7 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
   contract(`C2 backed by BAC${bacDec}`, async (acc: string[]) => {
     // define s few variables with let for ease of use (don't have to use `this` all the time)
     let c2: C2Instance, bac: BackingTokenInstance;
-    let initBac: BN[]
+    let initBac: BN[];
     let humanC2, humanBac;
 
     before(async () => {
@@ -49,7 +60,9 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
 
       // Give everyone a heaping supply of BAC
       await Promise.all(
-        Array(10).fill(0).map((_,i) => bac.mint(1000000, { from: acc[i] }))
+        Array(10)
+          .fill(0)
+          .map((_, i) => bac.mint(1000000, { from: acc[i] }))
       );
 
       // This c2 isn't actually used except to get the number of decimals
@@ -63,7 +76,9 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
       await c2.establish(bac.address, agreementHash);
 
       initBac = await Promise.all(
-        Array(10).fill(0).map((_,i) => getBalance(bac, acc[i]))
+        Array(10)
+          .fill(0)
+          .map((_, i) => getBalance(bac, acc[i]))
       );
     });
 
@@ -104,7 +119,7 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
       const c2ToIssue = new BN(1);
       const tx = await c2.issue(acc[1], c2ToIssue);
 
-      truffleAssert.eventEmitted(tx, "Issued", (ev: Issued['args']) => {
+      truffleAssert.eventEmitted(tx, "Issued", (ev: Issued["args"]) => {
         return ev.account === acc[1] && ev.c2Issued.eq(c2ToIssue);
       });
       await assertBalance(c2, acc[1], c2ToIssue);
@@ -138,12 +153,12 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
       await c2.issue(acc[1], c2ToIssue);
 
       const tx = await c2.burn(firstBurn, { from: acc[1] });
-      truffleAssert.eventEmitted(tx, "Burned", (ev: Burned['args']) => {
+      truffleAssert.eventEmitted(tx, "Burned", (ev: Burned["args"]) => {
         return ev.account === acc[1] && ev.c2Burned.toNumber() === firstBurn;
       });
 
       const tx2 = await c2.burn(secondBurn, { from: acc[1] });
-      truffleAssert.eventEmitted(tx2, "Burned", (ev: Burned['args']) => {
+      truffleAssert.eventEmitted(tx2, "Burned", (ev: Burned["args"]) => {
         return ev.account === acc[1] && ev.c2Burned.toNumber() === secondBurn;
       });
 
@@ -235,13 +250,15 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
         from: acc[account],
       });
       await c2.fund(amountToBeFunded, { from: acc[account] });
-      const totalFundedAfter = (await c2.totalAmountFunded());
-      const bacBalAfter = (await c2.bacBalance());
+      const totalFundedAfter = await c2.totalAmountFunded();
+      const bacBalAfter = await c2.bacBalance();
       const bacBalAccountAfter = await getBalance(bac, acc[account]);
 
       assert.isTrue(totalFunded.add(amountToBeFunded).eq(totalFundedAfter));
       assert.isTrue(bacBal.add(amountToBeFunded).eq(bacBalAfter));
-      assert.isTrue(initBac[account].sub(amountToBeFunded).eq(bacBalAccountAfter));
+      assert.isTrue(
+        initBac[account].sub(amountToBeFunded).eq(bacBalAccountAfter)
+      );
     });
 
     it("allows users to withdraw funds, proportional to share of tokens held, up to the funded ratio", async () => {
@@ -255,20 +272,24 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
 
       // Users withdraw tokens, should get 50% of their tokens worth of bac
       const tx1 = await c2.cashout({ from: acc[1] });
-      truffleAssert.eventEmitted(tx1, "CashedOut", (ev: CashedOut['args']) => {
+      truffleAssert.eventEmitted(tx1, "CashedOut", (ev: CashedOut["args"]) => {
         return ev.account == acc[1] && ev.bacReceived.toNumber() == 50;
       });
-      assert.isTrue((await getBalance(bac, acc[1])).sub(initBac[1]).eq(new BN(50)));
+      assert.isTrue(
+        (await getBalance(bac, acc[1])).sub(initBac[1]).eq(new BN(50))
+      );
 
       const tx2 = await c2.cashout({ from: acc[2] });
-      truffleAssert.eventEmitted(tx2, "CashedOut", (ev: CashedOut['args']) => {
+      truffleAssert.eventEmitted(tx2, "CashedOut", (ev: CashedOut["args"]) => {
         return ev.account == acc[2] && ev.bacReceived.toNumber() == 150;
       });
-      assert.isTrue((await getBalance(bac, acc[2])).sub(initBac[2]).eq( new BN(150)));
+      assert.isTrue(
+        (await getBalance(bac, acc[2])).sub(initBac[2]).eq(new BN(150))
+      );
 
       // amountWithdrawn is updated
-      assert.isTrue((await getAmountWithdrawn(c2, acc[1])).eq( new BN(50)));
-      assert.isTrue((await getAmountWithdrawn(c2, acc[2])).eq( new BN(150)));
+      assert.isTrue((await getAmountWithdrawn(c2, acc[1])).eq(new BN(50)));
+      assert.isTrue((await getAmountWithdrawn(c2, acc[2])).eq(new BN(150)));
 
       // but the actual c2 tokens themselves are not destroyed
       assert.isTrue((await getBalance(c2, acc[1])).eq(new BN(100)));

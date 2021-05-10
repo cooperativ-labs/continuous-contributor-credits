@@ -1,8 +1,17 @@
-const C2 = artifacts.require("C2");
-const BAC = artifacts.require("BackingToken");
-const BAC21 = artifacts.require("BackingToken21");
-const BAC15 = artifacts.require("BackingToken15");
-const BAC6 = artifacts.require("BackingToken6");
+import { assert } from "chai";
+// @ts-ignore
+import {contract, artifacts} from "@typechain/truffle-v5/static"
+import BN from "bn.js";
+import {BackingTokenContract, BackingTokenInstance, C2Contract, C2Instance} from "../types/truffle-contracts";
+import ContractInstance = Truffle.ContractInstance;
+import {AddressType} from "typechain";
+
+
+const C2: C2Contract = artifacts.require("C2");
+const BAC: BackingTokenContract = artifacts.require("BackingToken");
+const BAC21: BackingTokenContract = artifacts.require("BackingToken21");
+const BAC15: BackingTokenContract = artifacts.require("BackingToken15");
+const BAC6: BackingTokenContract = artifacts.require("BackingToken6");
 const truffleAssert = require("truffle-assertions");
 const agreementHash =
   "0x9e058097cb6c2dcbfa44b5d97f28bf729eed745cb6a061ceea7176cb14d77296";
@@ -11,7 +20,7 @@ const fail = () => {
   assert.isTrue(false);
 };
 
-const getBalance = async (instance, addr) => {
+const getBalance = async (instance: ContractInstance, addr: string) => {
   const bal = await instance.balanceOf.call(addr);
   return bal.toNumber();
 };
@@ -25,20 +34,20 @@ const getAmountWithdrawn = async (instance, addr) => {
   return amountWithdrawn.toNumber();
 };
 
-function testBacDecimals(backingToken, bacDec) {
-  contract(`C2 backed by BAC${bacDec}`, async (acc) => {
+function testBacDecimals(backingToken: BackingTokenContract, bacDec) {
+  contract(`C2 backed by BAC${bacDec}`, async (acc: string[]) => {
     // define s few variables with let for ease of use (don't have to use `this` all the time)
-    let c2, bac;
+    let c2: C2Instance, bac: BackingTokenInstance;
     let humanC2, humanBac;
 
     before(async () => {
-      bac = await backingToken.deployed();
-      const bacDecimals = await bac.decimals.call();
+      bac = await backingToken.new(acc[0]);
+      const bacDecimals = await bac.decimals.call(this);
       assert.isTrue(bacDecimals.eq(new BN(bacDec)));
 
       // Give everyone a heaping supply of BAC
       await Promise.all(
-        [...Array(10).keys()].map((i) => bac.mint(1000000, { from: acc[i] }))
+        Array(10).fill(0).map((_,i) => bac.mint(1000000, { from: acc[i] }))
       );
 
       // This c2 isn't actually used except to get the number of decimals
@@ -50,20 +59,20 @@ function testBacDecimals(backingToken, bacDec) {
       c2.establish(bac.address, agreementHash);
 
       this.initBac = await Promise.all(
-        [...Array(10).keys()].map((i) => getBalance(bac, acc[i]))
+        Array(10).fill(0).map((_,i) => getBalance(bac, acc[i]))
       );
     });
 
     it("starts unestablished, which prevents issuance", async () => {
       const freshC2 = await C2.new();
-      assert.isFalse(await freshC2.isEstablished.call());
+      assert.isFalse(await freshC2.isEstablished.call(this));
       await truffleAssert.reverts(freshC2.issue(acc[1], 1));
     });
 
     it("can be established", async () => {
       const freshC2 = await C2.new();
       await freshC2.establish(bac.address, agreementHash);
-      assert.isTrue(await freshC2.isEstablished.call());
+      assert.isTrue(await freshC2.isEstablished.call(this));
       assert.equal(await freshC2.totalSupply.call(), 0);
       await assertBalance(bac, freshC2.address, 0);
     });
@@ -124,13 +133,13 @@ function testBacDecimals(backingToken, bacDec) {
 
       await c2.issue(acc[1], c2ToIssue);
 
-      tx = await c2.burn(firstBurn, { from: acc[1] });
+      const tx = await c2.burn(firstBurn, { from: acc[1] });
       truffleAssert.eventEmitted(tx, "Burned", (ev) => {
         return ev.account === acc[1] && ev.c2Burned.toNumber() === firstBurn;
       });
 
-      tx = await c2.burn(secondBurn, { from: acc[1] });
-      truffleAssert.eventEmitted(tx, "Burned", (ev) => {
+      const tx2 = await c2.burn(secondBurn, { from: acc[1] });
+      truffleAssert.eventEmitted(tx2, "Burned", (ev) => {
         return ev.account === acc[1] && ev.c2Burned.toNumber() === secondBurn;
       });
 

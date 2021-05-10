@@ -98,7 +98,7 @@ contract C2 is ERC20, Ownable {
         if (balanceOf(c2Holder) == 0) {
             return 0;
         }
-
+        return 0;
         // tokens owned * proportion funded
         // proportion funded = totalAmountFunded / totalBackingNeededToFund
     }

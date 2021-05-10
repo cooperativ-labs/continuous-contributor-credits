@@ -10,7 +10,7 @@
     "test": "truffle test",
     "lint": "prettier --check test migrations contracts",
     "fmt": "prettier --write test migrations contracts",
-    "generate-types": "typechain --target=truffle-v5 'build/contracts/{C2,BackingToken}.json'",
+    "generate-types": "typechain --target=truffle-v5 'build/contracts/{C2,BackingToken*}.json'",
     "postinstall": "truffle compile && yarn generate-types"
   },
   "repository": {
@@ -32,6 +32,7 @@
     "@types/mocha": "^8.2.2",
     "@types/node": "^15.0.2",
     "bn.js": "^5.2.0",
+    "chai": "^4.3.4",
     "openzeppelin-solidity": "^3.4.1",
     "prettier": "^2.2.1",
     "prettier-plugin-solidity": "^1.0.0-beta.6",

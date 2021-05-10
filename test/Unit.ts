@@ -1,22 +1,20 @@
 import { assert } from "chai";
-// @ts-ignore
-import { contract, artifacts } from "@typechain/truffle-v5/static";
 import BN from "bn.js";
 import {
+  BackingToken15Contract, BackingToken15Instance,
+  BackingToken21Instance, BackingToken6Instance,
   BackingTokenContract,
   BackingTokenInstance,
   C2Contract,
   C2Instance,
 } from "../types/truffle-contracts";
-import ContractInstance = Truffle.ContractInstance;
-import { AddressType } from "typechain";
 import { Burned, CashedOut, Issued } from "../types/truffle-contracts/C2";
 
-const C2: C2Contract = artifacts.require("C2");
-const BAC: BackingTokenContract = artifacts.require("BackingToken");
-const BAC21: BackingTokenContract = artifacts.require("BackingToken21");
-const BAC15: BackingTokenContract = artifacts.require("BackingToken15");
-const BAC6: BackingTokenContract = artifacts.require("BackingToken6");
+const C2 = artifacts.require("C2");
+const BAC = artifacts.require("BackingToken");
+const BAC21 = artifacts.require("BackingToken21");
+const BAC15 = artifacts.require("BackingToken15");
+const BAC6 = artifacts.require("BackingToken6");
 const truffleAssert = require("truffle-assertions");
 const agreementHash =
   "0x9e058097cb6c2dcbfa44b5d97f28bf729eed745cb6a061ceea7176cb14d77296";
@@ -25,7 +23,8 @@ const fail = () => {
   assert.isTrue(false);
 };
 
-type BacOrC2 = C2Instance | BackingTokenInstance;
+type AnyBac = BackingTokenInstance | BackingToken21Instance | BackingToken15Instance | BackingToken6Instance
+type BacOrC2 = C2Instance | AnyBac;
 
 const getBalance = async (instance: BacOrC2, addr: string): Promise<BN> => {
   return await instance.balanceOf(addr);

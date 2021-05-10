@@ -8,7 +8,7 @@ import {
   C2Contract,
   C2Instance,
 } from "../types/truffle-contracts";
-import { Burned, CashedOut, Issued } from "../types/truffle-contracts/C2";
+import {AllEvents, Burned, CashedOut, Issued} from "../types/truffle-contracts/C2";
 
 const C2 = artifacts.require("C2");
 const BAC = artifacts.require("BackingToken");
@@ -53,28 +53,50 @@ const getAmountWithdrawn = async (
   return await instance.amountWithdrawn(addr);
 };
 
-function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
+async function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
   contract(`C2 backed by BAC${bacDec}`, async (acc: string[]) => {
     // define s few variables with let for ease of use (don't have to use `this` all the time)
     let c2: C2Instance, bac: BackingTokenInstance;
     let initBac: BN[];
-    let humanC2, humanBac;
+    let humanC2: (humanNumber: number) => BN;
+    let humanBac: (humanNumber: number) => BN;
+
+    const issueToEveryone = async(amountC2: BN | number): Promise<void> => {
+      // don't issue to owner
+      await Promise.all(
+          Array(9).fill(0).map(async (_, i) => await c2.issue(acc[i+1], amountC2))
+      )
+    }
+
+    const fundC2 = async(amountBac: BN | number, txDetails?: Truffle.TransactionDetails): Promise<Truffle.TransactionResponse<AllEvents>> => {
+      if (txDetails !== undefined) {
+        await bac.approve(c2.address, amountBac, txDetails);
+        return c2.fund(amountBac, txDetails)
+      } else {
+        await bac.approve(c2.address, amountBac);
+        return c2.fund(amountBac)
+      }
+    }
 
     before(async () => {
       bac = await backingToken.deployed();
       const bacDecimals = await bac.decimals();
       expect(bacDecimals).eq.BN(bacDec);
 
+      // This c2 isn't actually used except to get the number of decimals
+      c2 = await C2.deployed();
+      const c2Decimals = await c2.decimals();
+
+      // handy functions for working with human numbers
+      humanBac = (humanNumber: number): BN => new BN(humanNumber).mul(new BN(10).pow(bacDecimals));
+      humanC2 = (humanNumber: number): BN => new BN(humanNumber).mul(new BN(10).pow(c2Decimals));
+
       // Give everyone a heaping supply of BAC
       await Promise.all(
         Array(10)
           .fill(0)
-          .map((_, i) => bac.mint(1000000, { from: acc[i] }))
+          .map((_, i) => bac.mint(humanBac(1000000), { from: acc[i] }))
       );
-
-      // This c2 isn't actually used except to get the number of decimals
-      c2 = await C2.deployed();
-      const c2Decimals = await c2.decimals();
     });
 
     beforeEach(async () => {
@@ -123,7 +145,7 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
     });
 
     it("can issue tokens", async () => {
-      const c2ToIssue = new BN(1);
+      const c2ToIssue = humanC2(1);
       const tx = await c2.issue(acc[1], c2ToIssue);
 
       truffleAssert.eventEmitted(tx, "Issued", (ev: Issued["args"]) => {
@@ -133,12 +155,12 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
     });
 
     it("does not allow non-owners to issue tokens", async () => {
-      const c2ToIssue = 1000;
+      const c2ToIssue = humanC2(1000);
       truffleAssert.reverts(c2.issue(acc[1], c2ToIssue, { from: acc[1] }));
     });
 
     it.skip("increases a counter of tokensIssued when issuing", async () => {
-      const toIssue = new BN(1234);
+      const toIssue = humanC2(1234);
       expect.fail();
     });
 
@@ -151,30 +173,30 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
     });
 
     it("can burn up to all held tokens, but no more", async () => {
-      const c2ToIssue = 100;
-      const firstBurn = 20;
-      const secondBurn = 80;
-      expect(firstBurn + secondBurn).equals(c2ToIssue);
-      const overdraftAmount = 10;
+      const toIssue = humanC2(100);
+      const firstBurn = humanC2(20);
+      const secondBurn = humanC2(80);
+      expect(firstBurn.add(secondBurn)).eq.BN(toIssue);
+      const overdraftAmount = humanC2(10);
 
-      await c2.issue(acc[1], c2ToIssue);
+      await c2.issue(acc[1], toIssue);
 
       const tx = await c2.burn(firstBurn, { from: acc[1] });
       truffleAssert.eventEmitted(tx, "Burned", (ev: Burned["args"]) => {
-        return ev.account === acc[1] && ev.c2Burned.toNumber() === firstBurn;
+        return ev.account === acc[1] && ev.c2Burned.eq(firstBurn);
       });
 
       const tx2 = await c2.burn(secondBurn, { from: acc[1] });
       truffleAssert.eventEmitted(tx2, "Burned", (ev: Burned["args"]) => {
-        return ev.account === acc[1] && ev.c2Burned.toNumber() === secondBurn;
+        return ev.account === acc[1] && ev.c2Burned.eq(secondBurn);
       });
 
       truffleAssert.reverts(c2.burn(overdraftAmount, { from: acc[1] }));
     });
 
     it("reduces totalSupply when burning", async () => {
-      const toBurn = 5;
-      await c2.issue(acc[1], toBurn);
+      await issueToEveryone(humanC2(100))
+      const toBurn = humanC2(5);
 
       const totalSupplyBefore = await c2.totalSupply();
       await c2.burn(toBurn, { from: acc[1] });
@@ -193,10 +215,10 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
     });
 
     it("reports total BAC needed to be fully funded", async () => {
-      const amountToIssue = 300000;
+      const toIssue = humanC2(3000);
 
       // Once tokens are issued, should not considered funded
-      await c2.issue(acc[1], amountToIssue);
+      await c2.issue(acc[1], toIssue);
       expect(await c2.isFunded()).is.false;
 
       const amountNeededToFund = await c2.totalBackingNeededToFund();
@@ -205,8 +227,7 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
       expect(amountNeededToFund).gt.BN(0);
 
       const firstFunding = amountNeededToFund.div(new BN(10));
-      await bac.approve(c2.address, firstFunding);
-      await c2.fund(firstFunding);
+      await fundC2(firstFunding)
 
       const amountNeededToFund2 = await c2.totalBackingNeededToFund();
       const remainingToFund2 = await c2.remainingBackingNeededToFund();
@@ -215,8 +236,7 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
       expect(await c2.isFunded()).is.false;
 
       // Fund remaining
-      await bac.approve(c2.address, remainingToFund2);
-      await c2.fund(remainingToFund2);
+      await fundC2(remainingToFund2);
 
       expect(await c2.isFunded()).is.true;
       const remainingToFund3 = await c2.remainingBackingNeededToFund();
@@ -239,21 +259,19 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
     });
 
     it("fund updates totalAmountFunded", async () => {
-      const amountToBeFunded = new BN(250);
+      const toFund = humanBac(250);
       const account = 1;
       const totalFunded = await c2.totalAmountFunded();
       const bacBal = await c2.bacBalance();
-      await bac.approve(c2.address, amountToBeFunded, {
-        from: acc[account],
-      });
-      await c2.fund(amountToBeFunded, { from: acc[account] });
+      await fundC2(toFund, { from: acc[account]})
+
       const totalFundedAfter = await c2.totalAmountFunded();
       const bacBalAfter = await c2.bacBalance();
       const bacBalAccountAfter = await getBalance(bac, acc[account]);
 
-      expect(totalFunded.add(amountToBeFunded)).eq.BN(totalFundedAfter);
-      expect(bacBal.add(amountToBeFunded)).eq.BN(bacBalAfter);
-      expect(initBac[account].sub(amountToBeFunded)).eq.BN(
+      expect(totalFunded.add(toFund)).eq.BN(totalFundedAfter);
+      expect(bacBal.add(toFund)).eq.BN(bacBalAfter);
+      expect(initBac[account].sub(toFund)).eq.BN(
         bacBalAccountAfter
       );
     });
@@ -264,8 +282,7 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
       await c2.issue(acc[2], 300);
 
       // fund to 50%
-      await bac.approve(c2.address, 200, { from: acc[0] });
-      await c2.fund(200, { from: acc[0] });
+      await fundC2(200);
 
       // Users withdraw tokens, should get 50% of their tokens worth of bac
       const tx1 = await c2.cashout({ from: acc[1] });
@@ -293,9 +310,9 @@ function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
   });
 }
 
-describe("C2", () => {
-  testBacDecimals(BAC, 18);
-  // testBacDecimals(BAC21, 21);
-  // testBacDecimals(BAC15, 15);
-  // testBacDecimals(BAC6, 6);
+describe("C2", async () => {
+  await testBacDecimals(BAC, 18);
+  // await testBacDecimals(BAC21, 21);
+  // await testBacDecimals(BAC15, 15);
+  // await testBacDecimals(BAC6, 6);
 });

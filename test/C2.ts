@@ -8,7 +8,12 @@ import {
   C2Contract,
   C2Instance,
 } from "../types/truffle-contracts";
-import {AllEvents, Burned, CashedOut, Issued} from "../types/truffle-contracts/C2";
+import {
+  AllEvents,
+  Burned,
+  CashedOut,
+  Issued,
+} from "../types/truffle-contracts/C2";
 
 const C2 = artifacts.require("C2");
 const BAC = artifacts.require("BackingToken");
@@ -53,7 +58,10 @@ const getAmountWithdrawn = async (
   return await instance.amountWithdrawn(addr);
 };
 
-async function testBacDecimals(backingToken: BackingTokenContract, bacDec: number) {
+async function testBacDecimals(
+  backingToken: BackingTokenContract,
+  bacDec: number
+) {
   contract(`C2 backed by BAC${bacDec}`, async (acc: string[]) => {
     // define s few variables with let for ease of use (don't have to use `this` all the time)
     let c2: C2Instance, bac: BackingTokenInstance;
@@ -61,22 +69,27 @@ async function testBacDecimals(backingToken: BackingTokenContract, bacDec: numbe
     let humanC2: (humanNumber: number) => BN;
     let humanBac: (humanNumber: number) => BN;
 
-    const issueToEveryone = async(amountC2: BN | number): Promise<void> => {
+    const issueToEveryone = async (amountC2: BN | number): Promise<void> => {
       // don't issue to owner
       await Promise.all(
-          Array(9).fill(0).map(async (_, i) => await c2.issue(acc[i+1], amountC2))
-      )
-    }
+        Array(9)
+          .fill(0)
+          .map(async (_, i) => await c2.issue(acc[i + 1], amountC2))
+      );
+    };
 
-    const fundC2 = async(amountBac: BN | number, txDetails?: Truffle.TransactionDetails): Promise<Truffle.TransactionResponse<AllEvents>> => {
+    const fundC2 = async (
+      amountBac: BN | number,
+      txDetails?: Truffle.TransactionDetails
+    ): Promise<Truffle.TransactionResponse<AllEvents>> => {
       if (txDetails !== undefined) {
         await bac.approve(c2.address, amountBac, txDetails);
-        return c2.fund(amountBac, txDetails)
+        return c2.fund(amountBac, txDetails);
       } else {
         await bac.approve(c2.address, amountBac);
-        return c2.fund(amountBac)
+        return c2.fund(amountBac);
       }
-    }
+    };
 
     before(async () => {
       bac = await backingToken.deployed();
@@ -88,8 +101,10 @@ async function testBacDecimals(backingToken: BackingTokenContract, bacDec: numbe
       const c2Decimals = await c2.decimals();
 
       // handy functions for working with human numbers
-      humanBac = (humanNumber: number): BN => new BN(humanNumber).mul(new BN(10).pow(bacDecimals));
-      humanC2 = (humanNumber: number): BN => new BN(humanNumber).mul(new BN(10).pow(c2Decimals));
+      humanBac = (humanNumber: number): BN =>
+        new BN(humanNumber).mul(new BN(10).pow(bacDecimals));
+      humanC2 = (humanNumber: number): BN =>
+        new BN(humanNumber).mul(new BN(10).pow(c2Decimals));
 
       // Give everyone a heaping supply of BAC
       await Promise.all(
@@ -195,7 +210,7 @@ async function testBacDecimals(backingToken: BackingTokenContract, bacDec: numbe
     });
 
     it("reduces totalSupply when burning", async () => {
-      await issueToEveryone(humanC2(100))
+      await issueToEveryone(humanC2(100));
       const toBurn = humanC2(5);
 
       const totalSupplyBefore = await c2.totalSupply();
@@ -227,7 +242,7 @@ async function testBacDecimals(backingToken: BackingTokenContract, bacDec: numbe
       expect(amountNeededToFund).gt.BN(0);
 
       const firstFunding = amountNeededToFund.div(new BN(10));
-      await fundC2(firstFunding)
+      await fundC2(firstFunding);
 
       const amountNeededToFund2 = await c2.totalBackingNeededToFund();
       const remainingToFund2 = await c2.remainingBackingNeededToFund();
@@ -263,7 +278,7 @@ async function testBacDecimals(backingToken: BackingTokenContract, bacDec: numbe
       const account = 1;
       const totalFunded = await c2.totalAmountFunded();
       const bacBal = await c2.bacBalance();
-      await fundC2(toFund, { from: acc[account]})
+      await fundC2(toFund, { from: acc[account] });
 
       const totalFundedAfter = await c2.totalAmountFunded();
       const bacBalAfter = await c2.bacBalance();
@@ -271,9 +286,7 @@ async function testBacDecimals(backingToken: BackingTokenContract, bacDec: numbe
 
       expect(totalFunded.add(toFund)).eq.BN(totalFundedAfter);
       expect(bacBal.add(toFund)).eq.BN(bacBalAfter);
-      expect(initBac[account].sub(toFund)).eq.BN(
-        bacBalAccountAfter
-      );
+      expect(initBac[account].sub(toFund)).eq.BN(bacBalAccountAfter);
     });
 
     it("allows users to withdraw funds, proportional to share of tokens held, up to the funded ratio", async () => {

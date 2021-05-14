@@ -6,3 +6,6 @@ node_modules/
 !*.secret
 secrets.json
 .idea
+types
+artifacts
+cache

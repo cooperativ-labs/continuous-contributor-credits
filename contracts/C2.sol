@@ -94,14 +94,13 @@ contract C2 is ERC20, Ownable {
         return amountC2.mul(bacBalance()).sub(1).div(totalSupply()).add(1);
     }
 
-    function totalAmountPaidTo(address c2Holder) public view returns (uint256) {
-        if (balanceOf(c2Holder) == 0) {
-            return 0;
-        }
-
-        // tokens owned * proportion funded
-        // proportion funded = totalAmountFunded / totalBackingNeededToFund
-    }
+    //    function totalAmountPaidTo(address c2Holder) public view returns (uint256) {
+    //        if (balanceOf(c2Holder) == 0) {
+    //            return 0;
+    //        }
+    //        // tokens owned * proportion funded
+    //        // proportion funded = totalAmountFunded / totalBackingNeededToFund
+    //    }
 
     function totalBackingNeededToFund() public view returns (uint256) {
         if (totalSupply() == 0) {

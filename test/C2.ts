@@ -66,8 +66,13 @@ async function testBacDecimals(
     // define s few variables with let for ease of use (don't have to use `this` all the time)
     let c2: C2Instance, bac: BackingTokenInstance;
     let initBac: BN[];
-    let humanC2: (humanNumber: number) => BN;
-    let humanBac: (humanNumber: number) => BN;
+
+    // handy functions for working with human numbers
+    const c2Decimals: BN = new BN(18);
+    const humanC2 = (humanNumber: number): BN =>
+        new BN(humanNumber).mul(new BN(10).pow(c2Decimals));
+    const humanBac = (humanNumber: number): BN =>
+        new BN(humanNumber).mul(new BN(10).pow(new BN(bacDec)));
 
     const issueToEveryone = async (amountC2: BN | number): Promise<void> => {
       // don't issue to owner
@@ -96,15 +101,8 @@ async function testBacDecimals(
       const bacDecimals = await bac.decimals();
       expect(bacDecimals).eq.BN(bacDec);
 
-      // This c2 isn't actually used except to get the number of decimals
       c2 = await C2.deployed();
-      const c2Decimals = await c2.decimals();
-
-      // handy functions for working with human numbers
-      humanBac = (humanNumber: number): BN =>
-        new BN(humanNumber).mul(new BN(10).pow(bacDecimals));
-      humanC2 = (humanNumber: number): BN =>
-        new BN(humanNumber).mul(new BN(10).pow(c2Decimals));
+      expect(await c2.decimals()).eq.BN(c2Decimals)
 
       // Give everyone a heaping supply of BAC
       await Promise.all(
@@ -325,7 +323,7 @@ async function testBacDecimals(
 
 describe("C2", async () => {
   await testBacDecimals(BAC, 18);
-  // await testBacDecimals(BAC21, 21);
-  // await testBacDecimals(BAC15, 15);
-  // await testBacDecimals(BAC6, 6);
+  await testBacDecimals(BAC21, 21);
+  await testBacDecimals(BAC15, 15);
+  await testBacDecimals(BAC6, 6);
 });

@@ -192,7 +192,7 @@ async function testBacDecimals(
       const firstBurn = humanC2(20);
       const secondBurn = humanC2(80);
       expect(firstBurn.add(secondBurn)).eq.BN(toIssue);
-      const overdraftAmount = humanC2(10);
+      const overdraftAmount = 1; //1 of the smallest decimal, not human
 
       await c2.issue(acc[1], toIssue);
 

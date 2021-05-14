@@ -174,16 +174,16 @@ async function testBacDecimals(
       truffleAssert.reverts(c2.issue(acc[1], c2ToIssue, { from: acc[1] }));
     });
 
-    it.skip("increases a counter of tokensIssued when issuing", async () => {
+    it.skip("increases a counter of issuedToAccount when issuing", async () => {
       const toIssue = humanC2(1234);
       expect.fail();
     });
 
-    it.skip("decreases tokensIssued when burning", async () => {
+    it.skip("decreases issuedToAccount when burning", async () => {
       expect.fail();
     });
 
-    it.skip("does NOT decrease tokensIssued when cashing out", async () => {
+    it.skip("does NOT decrease issuedToAccount when cashing out", async () => {
       expect.fail();
     });
 

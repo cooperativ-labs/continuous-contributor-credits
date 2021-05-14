@@ -70,9 +70,9 @@ async function testBacDecimals(
     // handy functions for working with human numbers
     const c2Decimals: BN = new BN(18);
     const humanC2 = (humanNumber: number): BN =>
-        new BN(humanNumber).mul(new BN(10).pow(c2Decimals));
+      new BN(humanNumber).mul(new BN(10).pow(c2Decimals));
     const humanBac = (humanNumber: number): BN =>
-        new BN(humanNumber).mul(new BN(10).pow(new BN(bacDec)));
+      new BN(humanNumber).mul(new BN(10).pow(new BN(bacDec)));
 
     const issueToEveryone = async (amountC2: BN | number): Promise<void> => {
       // don't issue to owner
@@ -102,7 +102,7 @@ async function testBacDecimals(
       expect(bacDecimals).eq.BN(bacDec);
 
       c2 = await C2.deployed();
-      expect(await c2.decimals()).eq.BN(c2Decimals)
+      expect(await c2.decimals()).eq.BN(c2Decimals);
 
       // Give everyone a heaping supply of BAC
       await Promise.all(

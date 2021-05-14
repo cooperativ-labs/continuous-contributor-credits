@@ -30,6 +30,12 @@ contract C2 is ERC20, Ownable {
 
     constructor() public ERC20("ContributorCredits", "C^2") {}
 
+    bool public isLocked = false;
+    modifier isNotLocked() {
+        require(isLocked == false, "token must not be locked to use");
+        _;
+    }
+
     function establish(ERC20 backingTokenAddress, bytes32 agreement)
         public
         onlyOwner
@@ -42,15 +48,20 @@ contract C2 is ERC20, Ownable {
 
     event Issued(address indexed account, uint256 c2Issued);
 
-    function issue(address account, uint256 amount) public onlyOwner isLive {
+    function issue(address account, uint256 amount)
+        public
+        onlyOwner
+        isLive
+        isNotLocked
+    {
         // TODO: Don't allow issue when fully funded
-        // TODO: Don't allow when locked
         _mint(account, amount);
         emit Issued(account, amount);
     }
 
-    // TODO: Lock function
-    // Automatically lock when fully funded
+    function lock() public onlyOwner {
+        isLocked = true;
+    }
 
     event Burned(address indexed account, uint256 c2Burned);
 

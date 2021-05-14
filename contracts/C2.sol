@@ -138,7 +138,7 @@ contract C2 is ERC20, Ownable {
     }
 
     function isFunded() public view returns (bool) {
-        return bacBalance() >= totalBackingNeededToFund();
+        return totalAmountFunded() >= totalBackingNeededToFund();
     }
 
     function fund(uint256 amount) public isLive {

@@ -27,6 +27,7 @@ contract C2 is ERC20, Ownable {
     uint256 public totalAmountFunded = 0;
 
     mapping(address => uint256) public amountWithdrawn;
+    mapping(address => uint256) public issuedToAddress;
 
     constructor() public ERC20("ContributorCredits", "C^2") {}
 
@@ -46,6 +47,7 @@ contract C2 is ERC20, Ownable {
         // TODO: Don't allow issue when fully funded
         // TODO: Don't allow when locked
         _mint(account, amount);
+        issuedToAddress[account] += amount;
         emit Issued(account, amount);
     }
 
@@ -60,6 +62,7 @@ contract C2 is ERC20, Ownable {
         // What happens to funding ratio
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
+        issuedToAddress[_msgSender()] -= amount;
         backingToken.transfer(this.owner(), associatedBacking);
         emit Burned(_msgSender(), amount);
     }

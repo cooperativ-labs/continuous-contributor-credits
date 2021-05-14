@@ -167,6 +167,17 @@ async function testBacDecimals(
       await assertBalance(c2, acc[1], c2ToIssue);
     });
 
+    it("ownly SU can lock", async () => {
+      truffleAssert.reverts(c2.lock({ from: acc[1] }));
+    });
+
+    it("can't issue tokens after locking", async () => {
+      const c2ToIssue = humanC2(1);
+
+      await c2.lock({ from: acc[0] });
+      truffleAssert.reverts(c2.issue(acc[1], c2ToIssue));
+    });
+
     it("does not allow non-owners to issue tokens", async () => {
       const c2ToIssue = humanC2(1000);
       truffleAssert.reverts(c2.issue(acc[1], c2ToIssue, { from: acc[1] }));

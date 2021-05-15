@@ -54,7 +54,6 @@ contract C2 is ERC20, Ownable {
         isLive
         isNotLocked
     {
-        // TODO: Don't allow issue when fully funded
         _mint(account, amount);
         issuedToAddress[account] = issuedToAddress[account].add(amount);
         emit Issued(account, amount);
@@ -164,12 +163,34 @@ contract C2 is ERC20, Ownable {
     }
 
     function isFunded() public view returns (bool) {
-        return bacBalance() >= totalBackingNeededToFund();
+        return totalAmountFunded >= totalBackingNeededToFund();
     }
+
+    event Funded(address indexed account, uint256 bacFunded);
+    event CompletelyFunded();
 
     function fund(uint256 amount) public isLive {
         // TODO: fund function checks for extra funds (OPTIONAL)
-        backingToken.transferFrom(_msgSender(), address(this), amount);
-        totalAmountFunded = totalAmountFunded.add(amount);
+        require(
+            isFunded() == false,
+            "cannot fund a contract that is is already funded"
+        );
+
+        uint256 remainingNeeded = remainingBackingNeededToFund();
+        if (remainingNeeded <= amount) {
+            totalAmountFunded = totalAmountFunded.add(remainingNeeded);
+            isLocked = true;
+            emit Funded(_msgSender(), remainingNeeded);
+            emit CompletelyFunded();
+            backingToken.transferFrom(
+                _msgSender(),
+                address(this),
+                remainingNeeded
+            );
+        } else {
+            totalAmountFunded = totalAmountFunded.add(amount);
+            emit Funded(_msgSender(), amount);
+            backingToken.transferFrom(_msgSender(), address(this), amount);
+        }
     }
 }

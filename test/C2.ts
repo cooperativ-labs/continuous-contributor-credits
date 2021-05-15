@@ -1,6 +1,4 @@
 import {
-  BackingToken15Contract,
-  BackingToken15Instance,
   BackingToken21Instance,
   BackingToken6Instance,
   BackingTokenContract,
@@ -19,13 +17,11 @@ import {
 const C2 = artifacts.require("C2");
 const BAC = artifacts.require("BackingToken");
 const BAC21 = artifacts.require("BackingToken21");
-const BAC15 = artifacts.require("BackingToken15");
 const BAC6 = artifacts.require("BackingToken6");
 
 type AnyBac =
   | BackingTokenInstance
   | BackingToken21Instance
-  | BackingToken15Instance
   | BackingToken6Instance;
 type BacOrC2 = C2Instance | AnyBac;
 
@@ -269,7 +265,7 @@ async function testBacDecimals(
       expect(totalSupplyBefore).eq.BN(totalSupplyAfter);
     });
 
-    it.skip("cashout is idempotent", async () => {
+    it("cashout is idempotent", async () => {
       await issueToEveryone(humanC2(100));
 
       await fundC2(humanBac(20));
@@ -288,10 +284,6 @@ async function testBacDecimals(
       expect(amountC2_1).eq.BN(amountC2_2);
       expect(amountBac_1).eq.BN(amountBac_2);
       expect(amountC2_1).lessThan.BN(humanC2(100));
-    });
-
-    it.skip("cannot burn tokens that have already been cashed out (i.e. can only burn down to 100% cashed out)", async () => {
-      expect.fail();
     });
 
     it("reports total BAC needed to be fully funded", async () => {
@@ -465,6 +457,5 @@ async function testBacDecimals(
 describe("C2", async () => {
   await testBacDecimals(BAC, 18);
   await testBacDecimals(BAC21, 21);
-  await testBacDecimals(BAC15, 15);
   await testBacDecimals(BAC6, 6);
 });

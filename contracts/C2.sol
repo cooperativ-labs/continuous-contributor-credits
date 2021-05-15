@@ -55,7 +55,6 @@ contract C2 is ERC20, Ownable {
         isLive
         isNotLocked
     {
-        // TODO: Don't allow issue when fully funded
         _mint(account, amount);
         issuedToAddress[account] = issuedToAddress[account].add(amount);
         emit Issued(account, amount);
@@ -158,19 +157,19 @@ contract C2 is ERC20, Ownable {
 
         uint256 remainingNeeded = remainingBackingNeededToFund();
         if (remainingNeeded <= amount) {
+            totalAmountFunded = totalAmountFunded.add(remainingNeeded);
+            isLocked = true;
+            emit Funded(_msgSender(), remainingNeeded);
+            emit CompletelyFunded();
             backingToken.transferFrom(
                 _msgSender(),
                 address(this),
                 remainingNeeded
             );
-            totalAmountFunded = totalAmountFunded.add(remainingNeeded);
-            emit Funded(_msgSender(), remainingNeeded);
-            emit CompletelyFunded();
-            isLocked = true;
         } else {
-            backingToken.transferFrom(_msgSender(), address(this), amount);
             totalAmountFunded = totalAmountFunded.add(amount);
             emit Funded(_msgSender(), amount);
+            backingToken.transferFrom(_msgSender(), address(this), amount);
         }
     }
 }

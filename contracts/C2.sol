@@ -82,15 +82,38 @@ contract C2 is ERC20, Ownable {
     event CashedOut(address indexed account, uint256 bacReceived);
 
     function cashout() public isLive {
-        uint256 alreadyWithdrawn =
+        uint256 alreadyWithdrawnC2 =
             issuedToAddress[_msgSender()].sub(this.balanceOf(_msgSender()));
-        uint256 eligibleWithdrawal =
+        uint256 eligibleWithdrawalBac =
             balanceOf(_msgSender()).mul(totalAmountFunded).div(totalSupply()); // TODO: account for decimal differences
-        uint256 amountToCashout = eligibleWithdrawal.sub(alreadyWithdrawn);
+        uint256 amountToCashoutBac =
+            eligibleWithdrawalBac.sub(c2_2_bac(alreadyWithdrawnC2));
+        uint256 amountToCashoutC2 =
+            bac_2_c2(eligibleWithdrawalBac).sub(alreadyWithdrawnC2);
 
-        backingToken.transfer(_msgSender(), amountToCashout);
-        _transfer(_msgSender(), address(this), amountToCashout);
-        emit CashedOut(_msgSender(), amountToCashout);
+        backingToken.transfer(_msgSender(), amountToCashoutBac);
+        _transfer(_msgSender(), address(this), amountToCashoutC2);
+        emit CashedOut(_msgSender(), amountToCashoutBac);
+    }
+
+    function bac_2_c2(uint256 amount) public view returns (uint256) {
+        if (decimals() > backingToken.decimals()) {
+            return
+                amount.mul(uint256(10)**(decimals() - backingToken.decimals()));
+        } else {
+            return
+                amount.div(uint256(10)**(backingToken.decimals() - decimals()));
+        }
+    }
+
+    function c2_2_bac(uint256 amount) public view returns (uint256) {
+        if (decimals() > backingToken.decimals()) {
+            return
+                amount.div(uint256(10)**(decimals() - backingToken.decimals()));
+        } else {
+            return
+                amount.div(uint256(10)**(backingToken.decimals() - decimals()));
+        }
     }
 
     // TODO: Transfer function that handles withdrawn amount

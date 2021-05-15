@@ -253,7 +253,7 @@ async function testBacDecimals(
       expect(totalSupplyBefore.sub(totalSupplyAfter)).eq.BN(toBurn);
     });
 
-    it.skip("does NOT reduce totalSupply when cashing out", async () => {
+    it("does NOT reduce totalSupply when cashing out", async () => {
       await issueToEveryone(humanC2(100));
 
       const totalSupplyBefore = await c2.totalSupply();
@@ -274,14 +274,17 @@ async function testBacDecimals(
 
       const totalSupplyAfter_1 = await c2.totalSupply();
       const amountC2_1 = await c2.balanceOf(acc[1]);
+      const amountBac_1 = await bac.balanceOf(acc[1]);
 
       await c2.cashout({ from: acc[1] });
       const totalSupplyAfter_2 = await c2.totalSupply();
       const amountC2_2 = await c2.balanceOf(acc[1]);
+      const amountBac_2 = await bac.balanceOf(acc[1]);
 
       expect(totalSupplyAfter_1).eq.BN(totalSupplyAfter_2);
       expect(amountC2_1).eq.BN(amountC2_2);
-      expect(amountC2_1).less.BN(humanC2(100));
+      expect(amountBac_1).eq.BN(amountBac_2);
+      expect(amountC2_1).lessThan.BN(humanC2(100));
     });
 
     it.skip("cannot burn tokens that have already been cashed out (i.e. can only burn down to 100% cashed out)", async () => {
@@ -350,16 +353,16 @@ async function testBacDecimals(
 
     it("allows users to withdraw funds, proportional to share of tokens held, up to the funded ratio", async () => {
       // TODO: Abstract this a bit
-      await c2.issue(acc[1], 100);
-      await c2.issue(acc[2], 300);
+      await c2.issue(acc[1], humanC2(100));
+      await c2.issue(acc[2], humanC2(300));
 
       // fund to 50%
-      await fundC2(200);
+      await fundC2(humanBac(200));
 
       // Users withdraw tokens, should get 50% of their tokens worth of bac
       const tx1 = await c2.cashout({ from: acc[1] });
       truffleAssert.eventEmitted(tx1, "CashedOut", (ev: CashedOut["args"]) => {
-        return ev.account == acc[1] && ev.bacReceived.eq(new BN(50));
+        return ev.account == acc[1] && ev.bacReceived.eq(new BN(humanBac(50)));
       });
       const acc1Delta = (await getBalance(bac, acc[1])).sub(initBac[1]);
       expect(acc1Delta).eq.BN(50);
@@ -372,12 +375,12 @@ async function testBacDecimals(
       expect(acc2Delta).eq.BN(150);
 
       // amountWithdrawn is updated
-      expect(await getAmountWithdrawn(c2, acc[1])).eq.BN(50);
-      expect(await getAmountWithdrawn(c2, acc[2])).eq.BN(150);
+      expect(await getAmountWithdrawn(c2, acc[1])).eq.BN(humanBac(50));
+      expect(await getAmountWithdrawn(c2, acc[2])).eq.BN(humanBac(150));
 
       // the c2 amount is updated
-      expect(await getBalance(c2, acc[1])).eq.BN(50);
-      expect(await getBalance(c2, acc[2])).eq.BN(150);
+      expect(await getBalance(c2, acc[1])).eq.BN(humanC2(50));
+      expect(await getBalance(c2, acc[2])).eq.BN(humanC2(150));
     });
   });
 }

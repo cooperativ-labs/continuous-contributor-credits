@@ -47,7 +47,7 @@ contract C2 is ERC20, Ownable {
         // TODO: Don't allow issue when fully funded
         // TODO: Don't allow when locked
         _mint(account, amount);
-        issuedToAddress[account] += amount;
+        issuedToAddress[account] = issuedToAddress[account].add(amount);
         emit Issued(account, amount);
     }
 
@@ -136,6 +136,6 @@ contract C2 is ERC20, Ownable {
     function fund(uint256 amount) public isLive {
         // TODO: fund function checks for extra funds (OPTIONAL)
         backingToken.transferFrom(_msgSender(), address(this), amount);
-        totalAmountFunded += amount;
+        totalAmountFunded = totalAmountFunded.add(amount);
     }
 }

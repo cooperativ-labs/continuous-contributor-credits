@@ -1,9 +1,8 @@
 import {
-  BackingToken21Instance,
-  BackingToken6Instance,
+  BackingToken21Contract,
+  BackingToken6Contract,
   BackingTokenContract,
   BackingTokenInstance,
-  C2Contract,
   C2Instance,
 } from "../types/truffle-contracts";
 import {
@@ -20,10 +19,9 @@ const BAC21 = artifacts.require("BackingToken21");
 const BAC6 = artifacts.require("BackingToken6");
 
 type AnyBac =
-  | BackingTokenInstance
-  | BackingToken21Instance
-  | BackingToken6Instance;
-type BacOrC2 = C2Instance | AnyBac;
+  | BackingTokenContract
+  | BackingToken21Contract
+  | BackingToken6Contract;
 
 const chai = require("chai");
 const expect = chai.expect;
@@ -36,10 +34,7 @@ chai.use(bnChai(BN));
 const agreementHash =
   "0x9e058097cb6c2dc3fa44b5d97f28bf729eed745cb6a061c3ea7176cb14d77296";
 
-async function testBacDecimals(
-  backingToken: BackingTokenContract,
-  bacDec: number
-) {
+async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
   contract(`C2 backed by BAC${bacDec}`, async (acc: string[]) => {
     // define s few variables with let for ease of use (don't have to use `this` all the time)
     let c2: C2Instance, bac: BackingTokenInstance;

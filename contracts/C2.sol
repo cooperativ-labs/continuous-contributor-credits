@@ -163,7 +163,7 @@ contract C2 is ERC20, Ownable {
         } else {
             backingToken.transferFrom(_msgSender(), address(this), amount);
             totalAmountFunded = totalAmountFunded.add(amount);
-            emit Funded(_msgSender(), remainingNeeded);
+            emit Funded(_msgSender(), amount);
         }
     }
 }

@@ -301,14 +301,14 @@ async function testBacDecimals(
       const funderInitBac = initBac[3];
 
       await c2.issue(acc[1], toIssue);
-      const tx = fundC2(toFund, { from: funder });
+      const tx = await fundC2(toFund, { from: funder });
 
       truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
         return ev.account === funder && ev.bacFunded.eq(toFund);
       });
       expect(await bac.balanceOf(funder)).eq.BN(funderInitBac.sub(toFund));
 
-      expect(await c2.isFunded()).is.true;
+      expect(await c2.isFunded()).is.false;
       expect(await c2.remainingBackingNeededToFund()).eq.BN(humanBac(80));
     });
 
@@ -330,7 +330,7 @@ async function testBacDecimals(
 
     it("uses 100 human Bac to fund 100 human C2, regardless of decimals", async () => {
       await c2.issue(acc[1], humanC2(100));
-      const tx = fundC2(humanBac(100));
+      const tx = await fundC2(humanBac(100));
 
       truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
         return ev.bacFunded.eq(humanBac(100));

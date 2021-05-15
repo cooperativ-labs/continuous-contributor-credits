@@ -316,7 +316,7 @@ async function testBacDecimals(
     });
 
     it("fund updates totalAmountFunded", async () => {
-      await c2.issue(acc[3], humanC2(1000))
+      await c2.issue(acc[3], humanC2(1000));
       const toFund = humanBac(250);
       const funder = acc[1];
       const totalFunded = await c2.totalAmountFunded();
@@ -326,7 +326,7 @@ async function testBacDecimals(
 
       expect(totalFunded.add(toFund)).eq.BN(totalFundedAfter);
 
-      await fundC2(toFund, {from: funder });
+      await fundC2(toFund, { from: funder });
       const totalFundedAfterAnother = await c2.totalAmountFunded();
 
       expect(totalFundedAfter.add(toFund)).eq.BN(totalFundedAfterAnother);
@@ -360,7 +360,9 @@ async function testBacDecimals(
       });
       truffleAssert.eventEmitted(tx, "CompletelyFunded");
 
-      expect(await bac.balanceOf(funder)).eq.BN(funderInitBac.sub(bacNeededToFund));
+      expect(await bac.balanceOf(funder)).eq.BN(
+        funderInitBac.sub(bacNeededToFund)
+      );
     });
 
     it("reverts if trying to fund before any tokens have been issued", async () => {

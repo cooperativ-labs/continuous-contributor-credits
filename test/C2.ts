@@ -360,7 +360,7 @@ async function testBacDecimals(
       });
       truffleAssert.eventEmitted(tx, "CompletelyFunded");
 
-      expect(bac.balanceOf(funder)).eq.BN(funderInitBac.sub(bacNeededToFund));
+      expect(await bac.balanceOf(funder)).eq.BN(funderInitBac.sub(bacNeededToFund));
     });
 
     it("reverts if trying to fund before any tokens have been issued", async () => {

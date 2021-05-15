@@ -26,7 +26,6 @@ contract C2 is ERC20, Ownable {
 
     uint256 public totalAmountFunded = 0;
 
-    mapping(address => uint256) public amountWithdrawn;
     mapping(address => uint256) public issuedToAddress;
 
     constructor() public ERC20("ContributorCredits", "C^2") {}
@@ -83,15 +82,14 @@ contract C2 is ERC20, Ownable {
     event CashedOut(address indexed account, uint256 bacReceived);
 
     function cashout() public isLive {
-        // TODO: always all available funds withdraw
-        // TODO: update memory values, don't actually delete tokens
-        // TODO: make sure that only withdraw upto amount available, don't allow if amountAvailable is < amountWithdrawn
-        uint256 alreadyWithdrawn = amountWithdrawn[_msgSender()];
+        uint256 alreadyWithdrawn =
+            issuedToAddress[_msgSender()].sub(this.balanceOf(_msgSender()));
         uint256 eligibleWithdrawal =
             balanceOf(_msgSender()).mul(totalAmountFunded).div(totalSupply()); // TODO: account for decimal differences
-        uint256 amountToCashout = eligibleWithdrawal - alreadyWithdrawn;
-        amountWithdrawn[_msgSender()] += amountToCashout;
+        uint256 amountToCashout = eligibleWithdrawal.sub(alreadyWithdrawn);
+
         backingToken.transfer(_msgSender(), amountToCashout);
+        _transfer(_msgSender(), address(this), amountToCashout);
         emit CashedOut(_msgSender(), amountToCashout);
     }
 

@@ -55,7 +55,9 @@ const getAmountWithdrawn = async (
   instance: C2Instance,
   addr: string
 ): Promise<BN> => {
-  return await instance.amountWithdrawn(addr);
+  const currentAmount = await instance.balanceOf(addr);
+  const issuedAmount = await instance.issuedToAddress(addr);
+  return issuedAmount.sub(currentAmount);
 };
 
 async function testBacDecimals(
@@ -252,7 +254,34 @@ async function testBacDecimals(
     });
 
     it.skip("does NOT reduce totalSupply when cashing out", async () => {
-      expect.fail();
+      await issueToEveryone(humanC2(100));
+
+      const totalSupplyBefore = await c2.totalSupply();
+
+      await fundC2(humanBac(20));
+      await c2.cashout({ from: acc[1] });
+
+      const totalSupplyAfter = await c2.totalSupply();
+
+      expect(totalSupplyBefore).eq.BN(totalSupplyAfter);
+    });
+
+    it.skip("cashout is idempotent", async () => {
+      await issueToEveryone(humanC2(100));
+
+      await fundC2(humanBac(20));
+      await c2.cashout({ from: acc[1] });
+
+      const totalSupplyAfter_1 = await c2.totalSupply();
+      const amountC2_1 = await c2.balanceOf(acc[1]);
+
+      await c2.cashout({ from: acc[1] });
+      const totalSupplyAfter_2 = await c2.totalSupply();
+      const amountC2_2 = await c2.balanceOf(acc[1]);
+
+      expect(totalSupplyAfter_1).eq.BN(totalSupplyAfter_2);
+      expect(amountC2_1).eq.BN(amountC2_2);
+      expect(amountC2_1).less.BN(humanC2(100));
     });
 
     it.skip("cannot burn tokens that have already been cashed out (i.e. can only burn down to 100% cashed out)", async () => {
@@ -290,7 +319,7 @@ async function testBacDecimals(
 
     it.skip("refunds overfunding to owner", async () => {
       //issue
-      //overund
+      //ovefund
       //check owner balance
       expect.fail();
     });
@@ -346,9 +375,9 @@ async function testBacDecimals(
       expect(await getAmountWithdrawn(c2, acc[1])).eq.BN(50);
       expect(await getAmountWithdrawn(c2, acc[2])).eq.BN(150);
 
-      // but the actual c2 tokens themselves are not destroyed
-      expect(await getBalance(c2, acc[1])).eq.BN(100);
-      expect(await getBalance(c2, acc[2])).eq.BN(300);
+      // the c2 amount is updated
+      expect(await getBalance(c2, acc[1])).eq.BN(50);
+      expect(await getBalance(c2, acc[2])).eq.BN(150);
     });
   });
 }

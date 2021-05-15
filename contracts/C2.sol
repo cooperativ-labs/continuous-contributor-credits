@@ -62,7 +62,9 @@ contract C2 is ERC20, Ownable {
         // What happens to funding ratio
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
-        issuedToAddress[_msgSender()] = issuedToAddress[_msgSender()].sub(amount);
+        issuedToAddress[_msgSender()] = issuedToAddress[_msgSender()].sub(
+            amount
+        );
         backingToken.transfer(this.owner(), associatedBacking);
         emit Burned(_msgSender(), amount);
     }

@@ -78,21 +78,24 @@ contract C2 is ERC20, Ownable {
         emit Burned(_msgSender(), amount);
     }
 
-    event CashedOut(address indexed account, uint256 bacReceived);
+    event CashedOut(address indexed account, uint256 c2CashedOut, uint256 bacReceived);
 
     function cashout() public isLive {
-        uint256 alreadyWithdrawnC2 =
+        // at 100% funded, all C2 can be withdrawn. At n% funded, n% of C2 can be withdrawn.
+        // Proportion funded can be calculated (handling the decimal conversion using the totalAmountNeededToFund)
+        uint256 cashableC2 = issuedToAddress[_msgSender()].mul(totalAmountFunded).div(totalBackingNeededToFund());
+        uint256 alreadyCashedC2 =
             issuedToAddress[_msgSender()].sub(this.balanceOf(_msgSender()));
-        uint256 eligibleWithdrawalBac =
-            balanceOf(_msgSender()).mul(totalAmountFunded).div(totalSupply()); // TODO: account for decimal differences
-        uint256 amountToCashoutBac =
-            eligibleWithdrawalBac.sub(c2_2_bac(alreadyWithdrawnC2));
-        uint256 amountToCashoutC2 =
-            bac_2_c2(eligibleWithdrawalBac).sub(alreadyWithdrawnC2);
+        uint256 c2ToCashOut = cashableC2.sub(alreadyCashedC2);
 
-        backingToken.transfer(_msgSender(), amountToCashoutBac);
-        _transfer(_msgSender(), address(this), amountToCashoutC2);
-        emit CashedOut(_msgSender(), amountToCashoutBac);
+        // proportion of funds earmarked for address is proportional to issuedToAddress/totalSupply
+        uint256 totalBacForAccount = totalAmountFunded.mul(issuedToAddress[_msgSender()]).div(totalSupply());
+        // of this, the part that is still eligible for withdrawal is proportional to the proportion of cashableC2 eligible for withdrawal
+        uint256 bacToReceive = totalBacForAccount.mul(c2ToCashOut).div(cashableC2);
+
+        _transfer(_msgSender(), address(this), c2ToCashOut);
+        emit CashedOut(_msgSender(), c2ToCashOut, bacToReceive);
+        backingToken.transfer(_msgSender(), bacToReceive);
     }
 
     function bac_2_c2(uint256 amount) public view returns (uint256) {

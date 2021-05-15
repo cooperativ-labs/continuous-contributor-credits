@@ -142,7 +142,7 @@ async function testBacDecimals(
     });
 
     it("cannot be established twice", async () => {
-      truffleAssert.reverts(c2.establish(bac.address, agreementHash));
+      await truffleAssert.reverts(c2.establish(bac.address, agreementHash));
     });
 
     it("Can access version string", async () => {
@@ -169,19 +169,21 @@ async function testBacDecimals(
     });
 
     it("ownly SU can lock", async () => {
-      truffleAssert.reverts(c2.lock({ from: acc[1] }));
+      await truffleAssert.reverts(c2.lock({ from: acc[1] }));
     });
 
     it("can't issue tokens after locking", async () => {
       const c2ToIssue = humanC2(1);
 
       await c2.lock({ from: acc[0] });
-      truffleAssert.reverts(c2.issue(acc[1], c2ToIssue));
+      await truffleAssert.reverts(c2.issue(acc[1], c2ToIssue));
     });
 
     it("does not allow non-owners to issue tokens", async () => {
       const c2ToIssue = humanC2(1000);
-      truffleAssert.reverts(c2.issue(acc[1], c2ToIssue, { from: acc[1] }));
+      await truffleAssert.reverts(
+        c2.issue(acc[1], c2ToIssue, { from: acc[1] })
+      );
     });
 
     it("increases a counter of issuedToAccount when issuing", async () => {
@@ -237,7 +239,7 @@ async function testBacDecimals(
         return ev.account === acc[1] && ev.c2Burned.eq(secondBurn);
       });
 
-      truffleAssert.reverts(c2.burn(overdraftAmount, { from: acc[1] }));
+      await truffleAssert.reverts(c2.burn(overdraftAmount, { from: acc[1] }));
     });
 
     it("reduces totalSupply when burning", async () => {
@@ -263,7 +265,8 @@ async function testBacDecimals(
     it("reports total BAC needed to be fully funded", async () => {
       const toIssue = humanC2(3000);
 
-      // Once tokens are issued, should not considered funded
+      // Starts "funded", but once tokens are issued, should not considered funded
+      expect(await c2.isFunded()).is.true;
       await c2.issue(acc[1], toIssue);
       expect(await c2.isFunded()).is.false;
 
@@ -273,7 +276,8 @@ async function testBacDecimals(
       expect(amountNeededToFund).gt.BN(0);
 
       const firstFunding = amountNeededToFund.div(new BN(10));
-      await fundC2(firstFunding);
+      const txPartialFund1 = await fundC2(firstFunding);
+      truffleAssert.eventNotEmitted(txPartialFund1, "CompletelyFunded");
 
       const amountNeededToFund2 = await c2.totalBackingNeededToFund();
       const remainingToFund2 = await c2.remainingBackingNeededToFund();
@@ -283,7 +287,7 @@ async function testBacDecimals(
 
       // Fund remaining
       const tx = await fundC2(remainingToFund2);
-      truffleAssert.eventEmitted(tx, "CompletelyFunded")
+      truffleAssert.eventEmitted(tx, "CompletelyFunded");
 
       expect(await c2.isFunded()).is.true;
       const remainingToFund3 = await c2.remainingBackingNeededToFund();
@@ -305,8 +309,7 @@ async function testBacDecimals(
       expect(await bac.balanceOf(funder)).eq.BN(funderInitBac.sub(toFund));
 
       expect(await c2.isFunded()).is.true;
-      expect(await c2.remainingBackingNeededToFund()).eq.BN(humanBac(80))
-
+      expect(await c2.remainingBackingNeededToFund()).eq.BN(humanBac(80));
     });
 
     it("fund updates totalAmountFunded", async () => {
@@ -332,6 +335,7 @@ async function testBacDecimals(
       truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
         return ev.bacFunded.eq(humanBac(100));
       });
+      truffleAssert.eventEmitted(tx, "CompletelyFunded");
       expect(await c2.isFunded()).is.true;
     });
 
@@ -350,16 +354,35 @@ async function testBacDecimals(
         // Actual amount funded is only the amount needed not the amount
         return ev.account === funder && ev.bacFunded.eq(bacNeededToFund);
       });
-      truffleAssert.eventEmitted(tx, "CompletelyFunded")
+      truffleAssert.eventEmitted(tx, "CompletelyFunded");
 
-      expect(bac.balanceOf(funder)).eq.BN(funderInitBac.sub(bacNeededToFund))
+      expect(bac.balanceOf(funder)).eq.BN(funderInitBac.sub(bacNeededToFund));
+    });
+
+    it("reverts if trying to fund before any tokens have been issued", async () => {
+      await truffleAssert.reverts(fundC2(1));
+      await truffleAssert.reverts(fundC2(humanBac(100)));
     });
 
     it("reverts if funded when already completely funded", async () => {
-      expect.fail()
-    })
+      await issueToEveryone(humanC2(100));
+      const toFund = await c2.remainingBackingNeededToFund();
+      await fundC2(toFund);
 
-    it.skip("auto-locks when contract is fully funded", async () => {
+      await truffleAssert.reverts(fundC2(1));
+      await truffleAssert.reverts(fundC2(humanBac(100)));
+    });
+
+    it("auto-locks when contract is fully funded", async () => {
+      await issueToEveryone(humanC2(100));
+      const toFund = await c2.remainingBackingNeededToFund();
+
+      expect(await c2.isLocked()).is.false;
+      await fundC2(toFund);
+      expect(await c2.isLocked()).is.true;
+    });
+
+    it.skip("what does it do if someone tries burning when they have stuff available to cashout (particuarly after the contract is already funded)?", async () => {
       expect.fail();
     });
 
@@ -403,7 +426,7 @@ async function testBacDecimals(
 
 describe("C2", async () => {
   await testBacDecimals(BAC, 18);
-  await testBacDecimals(BAC21, 21);
-  await testBacDecimals(BAC15, 15);
-  await testBacDecimals(BAC6, 6);
+  // await testBacDecimals(BAC21, 21);
+  // await testBacDecimals(BAC15, 15);
+  // await testBacDecimals(BAC6, 6);
 });

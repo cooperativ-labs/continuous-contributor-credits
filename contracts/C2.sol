@@ -151,7 +151,19 @@ contract C2 is ERC20, Ownable {
 
     function fund(uint256 amount) public isLive {
         // TODO: fund function checks for extra funds (OPTIONAL)
-        backingToken.transferFrom(_msgSender(), address(this), amount);
-        totalAmountFunded = totalAmountFunded.add(amount);
+        require(isFunded() == false, "cannot fund a contract that is is already funded");
+
+        uint256 remainingNeeded = remainingBackingNeededToFund();
+        if (remainingNeeded <= amount) {
+            backingToken.transferFrom(_msgSender(), address(this), remainingNeeded);
+            totalAmountFunded = totalAmountFunded.add(remainingNeeded);
+            emit Funded(_msgSender(), remainingNeeded);
+            emit CompletelyFunded();
+            lock();
+        } else {
+            backingToken.transferFrom(_msgSender(), address(this), amount);
+            totalAmountFunded = totalAmountFunded.add(amount);
+            emit Funded(_msgSender(), remainingNeeded);
+        }
     }
 }

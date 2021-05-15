@@ -296,36 +296,40 @@ async function testBacDecimals(
 
     it("can be (partially) funded", async () => {
       const toIssue = humanC2(100);
+      await c2.issue(acc[1], toIssue);
+      const contractBacBal = await c2.bacBalance();
+
       const toFund = humanBac(20);
       const funder = acc[3];
       const funderInitBac = initBac[3];
-
-      await c2.issue(acc[1], toIssue);
       const tx = await fundC2(toFund, { from: funder });
 
       truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
         return ev.account === funder && ev.bacFunded.eq(toFund);
       });
       expect(await bac.balanceOf(funder)).eq.BN(funderInitBac.sub(toFund));
+      const contractBacBalAfter = await c2.bacBalance();
+      expect(contractBacBal.add(toFund)).eq.BN(contractBacBalAfter);
 
       expect(await c2.isFunded()).is.false;
       expect(await c2.remainingBackingNeededToFund()).eq.BN(humanBac(80));
     });
 
     it("fund updates totalAmountFunded", async () => {
+      await c2.issue(acc[3], humanC2(1000))
       const toFund = humanBac(250);
-      const account = 1;
+      const funder = acc[1];
       const totalFunded = await c2.totalAmountFunded();
-      const bacBal = await c2.bacBalance();
-      await fundC2(toFund, { from: acc[account] });
 
+      await fundC2(toFund, { from: funder });
       const totalFundedAfter = await c2.totalAmountFunded();
-      const bacBalAfter = await c2.bacBalance();
-      const bacBalAccountAfter = await getBalance(bac, acc[account]);
 
       expect(totalFunded.add(toFund)).eq.BN(totalFundedAfter);
-      expect(bacBal.add(toFund)).eq.BN(bacBalAfter);
-      expect(initBac[account].sub(toFund)).eq.BN(bacBalAccountAfter);
+
+      await fundC2(toFund, {from: funder });
+      const totalFundedAfterAnother = await c2.totalAmountFunded();
+
+      expect(totalFundedAfter.add(toFund)).eq.BN(totalFundedAfterAnother);
     });
 
     it("uses 100 human Bac to fund 100 human C2, regardless of decimals", async () => {

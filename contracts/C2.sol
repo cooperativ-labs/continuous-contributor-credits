@@ -78,20 +78,31 @@ contract C2 is ERC20, Ownable {
         emit Burned(_msgSender(), amount);
     }
 
-    event CashedOut(address indexed account, uint256 c2CashedOut, uint256 bacReceived);
+    event CashedOut(
+        address indexed account,
+        uint256 c2CashedOut,
+        uint256 bacReceived
+    );
 
     function cashout() public isLive {
         // at 100% funded, all C2 can be withdrawn. At n% funded, n% of C2 can be withdrawn.
         // Proportion funded can be calculated (handling the decimal conversion using the totalAmountNeededToFund)
-        uint256 cashableC2 = issuedToAddress[_msgSender()].mul(totalAmountFunded).div(totalBackingNeededToFund());
+        uint256 cashableC2 =
+            issuedToAddress[_msgSender()].mul(totalAmountFunded).div(
+                totalBackingNeededToFund()
+            );
         uint256 alreadyCashedC2 =
             issuedToAddress[_msgSender()].sub(this.balanceOf(_msgSender()));
         uint256 c2ToCashOut = cashableC2.sub(alreadyCashedC2);
 
         // proportion of funds earmarked for address is proportional to issuedToAddress/totalSupply
-        uint256 totalBacForAccount = totalAmountFunded.mul(issuedToAddress[_msgSender()]).div(totalSupply());
+        uint256 totalBacForAccount =
+            totalAmountFunded.mul(issuedToAddress[_msgSender()]).div(
+                totalSupply()
+            );
         // of this, the part that is still eligible for withdrawal is proportional to the proportion of cashableC2 eligible for withdrawal
-        uint256 bacToReceive = totalBacForAccount.mul(c2ToCashOut).div(cashableC2);
+        uint256 bacToReceive =
+            totalBacForAccount.mul(c2ToCashOut).div(cashableC2);
 
         _transfer(_msgSender(), address(this), c2ToCashOut);
         emit CashedOut(_msgSender(), c2ToCashOut, bacToReceive);

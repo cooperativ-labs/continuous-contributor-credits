@@ -12,6 +12,7 @@ import {
   AllEvents,
   Burned,
   CashedOut,
+  Funded,
   Issued,
 } from "../types/truffle-contracts/C2";
 
@@ -281,26 +282,31 @@ async function testBacDecimals(
       expect(await c2.isFunded()).is.false;
 
       // Fund remaining
-      await fundC2(remainingToFund2);
+      const tx = await fundC2(remainingToFund2);
+      truffleAssert.eventEmitted(tx, "CompletelyFunded")
 
       expect(await c2.isFunded()).is.true;
       const remainingToFund3 = await c2.remainingBackingNeededToFund();
       expect(remainingToFund3).eq.BN(0);
     });
 
-    it.skip("refunds overfunding to owner", async () => {
-      //issue
-      //overund
-      //check owner balance
-      expect.fail();
-    });
+    it("can be (partially) funded", async () => {
+      const toIssue = humanC2(100);
+      const toFund = humanBac(20);
+      const funder = acc[3];
+      const funderInitBac = initBac[3];
 
-    it.skip("auto-locks when contract is fully funded", async () => {
-      expect.fail();
-    });
+      await c2.issue(acc[1], toIssue);
+      const tx = fundC2(toFund, { from: funder });
 
-    it.skip("does not allow transferring of tokens", async () => {
-      expect.fail();
+      truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
+        return ev.account === funder && ev.bacFunded.eq(toFund);
+      });
+      expect(await bac.balanceOf(funder)).eq.BN(funderInitBac.sub(toFund));
+
+      expect(await c2.isFunded()).is.true;
+      expect(await c2.remainingBackingNeededToFund()).eq.BN(humanBac(80))
+
     });
 
     it("fund updates totalAmountFunded", async () => {
@@ -317,6 +323,48 @@ async function testBacDecimals(
       expect(totalFunded.add(toFund)).eq.BN(totalFundedAfter);
       expect(bacBal.add(toFund)).eq.BN(bacBalAfter);
       expect(initBac[account].sub(toFund)).eq.BN(bacBalAccountAfter);
+    });
+
+    it("uses 100 human Bac to fund 100 human C2, regardless of decimals", async () => {
+      await c2.issue(acc[1], humanC2(100));
+      const tx = fundC2(humanBac(100));
+
+      truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
+        return ev.bacFunded.eq(humanBac(100));
+      });
+      expect(await c2.isFunded()).is.true;
+    });
+
+    it("refunds overfunding to funder", async () => {
+      await issueToEveryone(humanC2(100));
+      const bacNeededToFund = await c2.remainingBackingNeededToFund();
+      const bacToOverpay = humanBac(30);
+      const tryToFund = bacNeededToFund.add(bacToOverpay);
+      const funder = acc[1];
+      const funderInitBac = initBac[1];
+
+      expect(await bac.balanceOf(funder)).eq.BN(funderInitBac);
+      const tx = await fundC2(tryToFund, { from: funder });
+
+      truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
+        // Actual amount funded is only the amount needed not the amount
+        return ev.account === funder && ev.bacFunded.eq(bacNeededToFund);
+      });
+      truffleAssert.eventEmitted(tx, "CompletelyFunded")
+
+      expect(bac.balanceOf(funder)).eq.BN(funderInitBac.sub(bacNeededToFund))
+    });
+
+    it("reverts if funded when already completely funded", async () => {
+      expect.fail()
+    })
+
+    it.skip("auto-locks when contract is fully funded", async () => {
+      expect.fail();
+    });
+
+    it.skip("does not allow transferring of tokens", async () => {
+      expect.fail();
     });
 
     it("allows users to withdraw funds, proportional to share of tokens held, up to the funded ratio", async () => {

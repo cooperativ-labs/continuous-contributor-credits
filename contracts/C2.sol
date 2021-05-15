@@ -146,6 +146,9 @@ contract C2 is ERC20, Ownable {
         return totalAmountFunded >= totalBackingNeededToFund();
     }
 
+    event Funded(address indexed account, uint256 bacFunded);
+    event CompletelyFunded();
+
     function fund(uint256 amount) public isLive {
         // TODO: fund function checks for extra funds (OPTIONAL)
         backingToken.transferFrom(_msgSender(), address(this), amount);

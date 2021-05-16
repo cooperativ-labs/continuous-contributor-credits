@@ -404,14 +404,18 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       // Users withdraw tokens, should get 50% of their tokens worth of bac
       const tx1 = await c2.cashout({ from: acc[1] });
       truffleAssert.eventEmitted(tx1, "CashedOut", (ev: CashedOut["args"]) => {
-        return ev.account == acc[1] && ev.bacReceived.eq(new BN(humanBac(50)));
+        return ev.account == acc[1] &&
+            ev.c2CashedOut.eq(humanC2(50)) &&
+            ev.bacReceived.eq(humanBac(50));
       });
       const acc1Delta = (await bac.balanceOf(acc[1])).sub(initBac[1]);
       expect(acc1Delta).eq.BN(humanBac(50));
 
       const tx2 = await c2.cashout({ from: acc[2] });
       truffleAssert.eventEmitted(tx2, "CashedOut", (ev: CashedOut["args"]) => {
-        return ev.account == acc[2] && ev.bacReceived.toNumber() == 150;
+        return ev.account == acc[2] &&
+            ev.c2CashedOut.eq(humanC2(150)) &&
+            ev.bacReceived.eq(humanBac(150));
       });
       const acc2Delta = (await bac.balanceOf(acc[2])).sub(initBac[2]);
       expect(acc2Delta).eq.BN(humanBac(150));

@@ -85,6 +85,9 @@ contract C2 is ERC20, Ownable {
     );
 
     function cashout() public isLive {
+        if (issuedToAddress[_msgSender()] == 0 || totalAmountFunded == 0 ) {
+            return;
+        }
         // at 100% funded, all C2 can be withdrawn. At n% funded, n% of C2 can be withdrawn.
         // Proportion funded can be calculated (handling the decimal conversion using the totalAmountNeededToFund)
         uint256 cashableC2 =
@@ -94,6 +97,10 @@ contract C2 is ERC20, Ownable {
         uint256 alreadyCashedC2 =
             issuedToAddress[_msgSender()].sub(this.balanceOf(_msgSender()));
         uint256 c2ToCashOut = cashableC2.sub(alreadyCashedC2);
+
+        if (c2ToCashOut == 0) {
+            return;
+        }
 
         // proportion of funds earmarked for address is proportional to issuedToAddress/totalSupply
         uint256 totalBacForAccount =

@@ -26,7 +26,6 @@ contract C2 is ERC20, Ownable {
 
     uint256 public totalAmountFunded = 0;
 
-    mapping(address => uint256) public amountWithdrawn;
     mapping(address => uint256) public issuedToAddress;
 
     constructor() public ERC20("ContributorCredits", "C^2") {}
@@ -79,19 +78,62 @@ contract C2 is ERC20, Ownable {
         emit Burned(_msgSender(), amount);
     }
 
-    event CashedOut(address indexed account, uint256 bacReceived);
+    event CashedOut(
+        address indexed account,
+        uint256 c2CashedOut,
+        uint256 bacReceived
+    );
 
     function cashout() public isLive {
-        // TODO: always all available funds withdraw
-        // TODO: update memory values, don't actually delete tokens
-        // TODO: make sure that only withdraw upto amount available, don't allow if amountAvailable is < amountWithdrawn
-        uint256 alreadyWithdrawn = amountWithdrawn[_msgSender()];
-        uint256 eligibleWithdrawal =
-            balanceOf(_msgSender()).mul(totalAmountFunded).div(totalSupply()); // TODO: account for decimal differences
-        uint256 amountToCashout = eligibleWithdrawal - alreadyWithdrawn;
-        amountWithdrawn[_msgSender()] += amountToCashout;
-        backingToken.transfer(_msgSender(), amountToCashout);
-        emit CashedOut(_msgSender(), amountToCashout);
+        if (issuedToAddress[_msgSender()] == 0 || totalAmountFunded == 0) {
+            return;
+        }
+        // at 100% funded, all C2 can be withdrawn. At n% funded, n% of C2 can be withdrawn.
+        // Proportion funded can be calculated (handling the decimal conversion using the totalAmountNeededToFund)
+        uint256 cashableC2 =
+            issuedToAddress[_msgSender()].mul(totalAmountFunded).div(
+                totalBackingNeededToFund()
+            );
+        uint256 alreadyCashedC2 =
+            issuedToAddress[_msgSender()].sub(this.balanceOf(_msgSender()));
+        uint256 c2ToCashOut = cashableC2.sub(alreadyCashedC2);
+
+        if (c2ToCashOut == 0) {
+            return;
+        }
+
+        // proportion of funds earmarked for address is proportional to issuedToAddress/totalSupply
+        uint256 totalBacForAccount =
+            totalAmountFunded.mul(issuedToAddress[_msgSender()]).div(
+                totalSupply()
+            );
+        // of this, the part that is still eligible for withdrawal is proportional to the proportion of cashableC2 eligible for withdrawal
+        uint256 bacToReceive =
+            totalBacForAccount.mul(c2ToCashOut).div(cashableC2);
+
+        _transfer(_msgSender(), address(this), c2ToCashOut);
+        emit CashedOut(_msgSender(), c2ToCashOut, bacToReceive);
+        backingToken.transfer(_msgSender(), bacToReceive);
+    }
+
+    function bac_2_c2(uint256 amount) public view returns (uint256) {
+        if (decimals() > backingToken.decimals()) {
+            return
+                amount.mul(uint256(10)**(decimals() - backingToken.decimals()));
+        } else {
+            return
+                amount.div(uint256(10)**(backingToken.decimals() - decimals()));
+        }
+    }
+
+    function c2_2_bac(uint256 amount) public view returns (uint256) {
+        if (decimals() > backingToken.decimals()) {
+            return
+                amount.div(uint256(10)**(decimals() - backingToken.decimals()));
+        } else {
+            return
+                amount.div(uint256(10)**(backingToken.decimals() - decimals()));
+        }
     }
 
     // TODO: Transfer function that handles withdrawn amount

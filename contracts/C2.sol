@@ -85,7 +85,7 @@ contract C2 is ERC20, Ownable {
     );
 
     function cashout() public isLive {
-        if (issuedToAddress[_msgSender()] == 0 || totalAmountFunded == 0 ) {
+        if (issuedToAddress[_msgSender()] == 0 || totalAmountFunded == 0) {
             return;
         }
         // at 100% funded, all C2 can be withdrawn. At n% funded, n% of C2 can be withdrawn.

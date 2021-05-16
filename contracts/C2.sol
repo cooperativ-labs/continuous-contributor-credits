@@ -215,4 +215,3 @@ contract C2 is ERC20, Ownable {
         }
     }
 }
-

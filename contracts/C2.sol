@@ -27,6 +27,7 @@ contract C2 is ERC20, Ownable {
     uint256 public totalAmountFunded = 0;
 
     mapping(address => uint256) public issuedToAddress;
+    mapping(address => uint256) public bacWithdrawn;
 
     constructor() public ERC20("ContributorCredits", "C^2") {}
 
@@ -107,11 +108,13 @@ contract C2 is ERC20, Ownable {
             totalAmountFunded.mul(issuedToAddress[_msgSender()]).div(
                 totalSupply()
             );
-        // of this, the part that is still eligible for withdrawal is proportional to the proportion of cashableC2 eligible for withdrawal
         uint256 bacToReceive =
-            totalBacForAccount.mul(c2ToCashOut).div(cashableC2);
+            totalBacForAccount.sub(bacWithdrawn[_msgSender()]);
 
         _transfer(_msgSender(), address(this), c2ToCashOut);
+        bacWithdrawn[_msgSender()] = bacWithdrawn[_msgSender()].add(
+            bacToReceive
+        );
         emit CashedOut(_msgSender(), c2ToCashOut, bacToReceive);
         backingToken.transfer(_msgSender(), bacToReceive);
     }

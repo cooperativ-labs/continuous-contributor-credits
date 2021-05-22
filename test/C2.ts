@@ -532,6 +532,6 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
 describe("C2", async () => {
   await testBacDecimals(BAC, 18);
-  // await testBacDecimals(BAC21, 21);
-  // await testBacDecimals(BAC6, 6);
+  await testBacDecimals(BAC21, 21);
+  await testBacDecimals(BAC6, 6);
 });

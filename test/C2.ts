@@ -58,16 +58,20 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
     const fundC2 = async (
       amountBac: BN | number,
-      txDetails?: Truffle.TransactionDetails
+      txDetails: Truffle.TransactionDetails = {from: acc[0]}
     ): Promise<Truffle.TransactionResponse<AllEvents>> => {
-      if (txDetails !== undefined) {
-        await bac.approve(c2.address, amountBac, txDetails);
-        return c2.fund(amountBac, txDetails);
-      } else {
-        await bac.approve(c2.address, amountBac);
-        return c2.fund(amountBac);
-      }
+      await bac.approve(c2.address, amountBac, txDetails);
+      return c2.fund(amountBac, txDetails);
     };
+
+    const fundC2ToPercent = async (percentage: number, txDetails: Truffle.TransactionDetails = {from: acc[0]}) => {
+      expect(percentage).to.be.lessThanOrEqual(100);
+      expect(percentage).to.be.greaterThanOrEqual(0);
+      const amountToFund = (await c2.totalBackingNeededToFund()).mul(new BN(percentage)).div(new BN(100)).sub(await c2.totalAmountFunded())
+      expect(amountToFund).to.be.gte.BN(0);
+
+      return fundC2(amountToFund, txDetails);
+    }
 
     before(async () => {
       bac = await backingToken.deployed();
@@ -390,10 +394,6 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       expect.fail();
     });
 
-    it.skip("does not allow transferring of tokens", async () => {
-      expect.fail();
-    });
-
     it("can be cashed out up to the proportion funded", async () => {
       await c2.issue(acc[1], humanC2(100));
       await c2.issue(acc[2], humanC2(300));
@@ -446,11 +446,80 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       );
       expect(await c2.bacWithdrawn(acc[1])).eq.BN(toFund.add(toFund));
     });
+
+    describe("transfer", () => {
+      it("can transfer all tokens to a fresh address", async () => {
+        const toIssue = humanC2(100);
+        await c2.issue(acc[1], toIssue);
+        await c2.transfer(acc[2], toIssue, {from: acc[1]});
+
+        expect(await c2.balanceOf(acc[1])).to.eq.BN(0);
+        expect(await c2.balanceOf(acc[2])).to.eq.BN(toIssue);
+
+        expect(await c2.issuedToAddress(acc[1])).to.eq.BN(0);
+        expect(await c2.issuedToAddress(acc[2])).to.eq.BN(toIssue);
+      });
+
+      it("can transfer all tokens to an address that already has tokens", async () => {
+        const toIssue1 = humanC2(100);
+        await c2.issue(acc[1], toIssue1)
+        const toIssue2 = humanC2(350);
+        await c2.issue(acc[2], toIssue2)
+
+        await c2.transfer(acc[2], toIssue1, {from: acc[1]});
+
+        expect(await c2.balanceOf(acc[1])).to.eq.BN(0);
+        expect(await c2.balanceOf(acc[2])).to.eq.BN(toIssue1.add(toIssue2));
+
+        expect(await c2.issuedToAddress(acc[1])).to.eq.BN(0);
+        expect(await c2.issuedToAddress(acc[2])).to.eq.BN(toIssue1.add(toIssue2))
+      });
+
+      it("can transfer all remaining tokens after a cashout has been performed", async () => {
+        const toIssue1 = humanC2(100);
+        await c2.issue(acc[1], toIssue1)
+        const toIssue2 = humanC2(300);
+        await c2.issue(acc[2], toIssue2);
+
+        await fundC2ToPercent(50);
+        await c2.cashout({from: acc[1]})
+        const newBal1 = await c2.balanceOf(acc[1]);
+        expect(newBal1).to.eq.BN(toIssue1.div(new BN(2)));
+        const bacWithdrawn = (await bac.balanceOf(acc[1])).sub(initBac[1]);
+        expect(bacWithdrawn).to.eq.BN(await c2.bacWithdrawn(acc[1]))
+
+        await c2.transfer(acc[2], newBal1,{from: acc[1]});
+
+        expect(await c2.balanceOf(acc[1])).to.eq.BN(0);
+        expect(await c2.balanceOf(acc[2])).to.eq.BN(toIssue2.add(newBal1));
+
+        expect(await c2.issuedToAddress(acc[1])).to.eq.BN(0);
+        expect(await c2.issuedToAddress(acc[2])).to.eq.BN(toIssue2.add(toIssue1));
+
+        // BacWithdrawn transfers as well
+        expect(await c2.bacWithdrawn(acc[1])).to.eq.BN(0);
+        expect(await c2.bacWithdrawn(acc[2])).to.eq.BN(bacWithdrawn);
+      })
+
+      it("can use a helper function transferAll, to automatically transfer all tokens to another address", async () => {
+        const toIssue = humanC2(100);
+        await c2.issue(acc[3], toIssue);
+
+        await c2.transferAll(acc[4], {from: acc[3]});
+        expect(await c2.balanceOf(acc[3])).to.eq.BN(0);
+        expect(await c2.balanceOf(acc[4])).to.eq.BN(toIssue);
+      });
+
+      it("reverts if trying to transfer not all the coins", async () => {
+        await c2.issue(acc[1], humanC2(100));
+        await truffleAssert.reverts(c2.transfer(acc[2], humanC2(50), { from: acc[1]}));
+      });
+    });
   });
 }
 
 describe("C2", async () => {
   await testBacDecimals(BAC, 18);
-  await testBacDecimals(BAC21, 21);
-  await testBacDecimals(BAC6, 6);
+  // await testBacDecimals(BAC21, 21);
+  // await testBacDecimals(BAC6, 6);
 });

@@ -64,6 +64,24 @@ contract C2 is ERC20, Ownable {
         isLocked = true;
     }
 
+    function transfer(address recipient, uint256 amount) public override isLive returns (bool) {
+        require(amount == this.balanceOf(_msgSender()), "Only transfers of all tokens are allowed");
+
+        issuedToAddress[recipient] = issuedToAddress[recipient].add(issuedToAddress[_msgSender()]);
+        issuedToAddress[_msgSender()] = 0;
+
+        bacWithdrawn[recipient] = bacWithdrawn[recipient].add(bacWithdrawn[_msgSender()]);
+        bacWithdrawn[_msgSender()] = 0;
+
+        _transfer(_msgSender(), recipient, amount);
+
+        return true;
+    }
+
+    function transferAll(address recipient) public isLive returns (bool) {
+        return transfer(recipient, this.balanceOf(_msgSender()));
+    }
+
     event Burned(address indexed account, uint256 c2Burned);
 
     function burn(uint256 amount) public isLive {

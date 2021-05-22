@@ -478,9 +478,7 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         expect(await c2.balanceOf(acc[2])).to.eq.BN(toIssue1.add(toIssue2));
 
         expect(await c2.shares(acc[1])).to.eq.BN(0);
-        expect(await c2.shares(acc[2])).to.eq.BN(
-          toIssue1.add(toIssue2)
-        );
+        expect(await c2.shares(acc[2])).to.eq.BN(toIssue1.add(toIssue2));
       });
 
       it("can transfer all remaining tokens after a cashout has been performed", async () => {
@@ -502,9 +500,7 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         expect(await c2.balanceOf(acc[2])).to.eq.BN(toIssue2.add(newBal1));
 
         expect(await c2.shares(acc[1])).to.eq.BN(0);
-        expect(await c2.shares(acc[2])).to.eq.BN(
-          toIssue2.add(toIssue1)
-        );
+        expect(await c2.shares(acc[2])).to.eq.BN(toIssue2.add(toIssue1));
 
         // BacWithdrawn transfers as well
         expect(await c2.bacWithdrawn(acc[1])).to.eq.BN(0);

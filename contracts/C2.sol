@@ -75,9 +75,7 @@ contract C2 is ERC20, Ownable {
             "Only transfers of all tokens are allowed"
         );
 
-        shares[recipient] = shares[recipient].add(
-            shares[_msgSender()]
-        );
+        shares[recipient] = shares[recipient].add(shares[_msgSender()]);
         shares[_msgSender()] = 0;
 
         bacWithdrawn[recipient] = bacWithdrawn[recipient].add(
@@ -102,9 +100,7 @@ contract C2 is ERC20, Ownable {
         // What happens to funding ratio
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
-        shares[_msgSender()] = shares[_msgSender()].sub(
-            amount
-        );
+        shares[_msgSender()] = shares[_msgSender()].sub(amount);
         backingToken.transfer(this.owner(), associatedBacking);
         emit Burned(_msgSender(), amount);
     }
@@ -121,9 +117,7 @@ contract C2 is ERC20, Ownable {
         }
         // proportion of funds earmarked for address is proportional to shares/totalSupply
         uint256 totalBacForAccount =
-            totalAmountFunded.mul(shares[_msgSender()]).div(
-                totalSupply()
-            );
+            totalAmountFunded.mul(shares[_msgSender()]).div(totalSupply());
         uint256 bacToReceive =
             totalBacForAccount.sub(bacWithdrawn[_msgSender()]);
 

@@ -1,7 +1,6 @@
 const C2 = artifacts.require("C2");
 const BackingToken = artifacts.require("BackingToken");
 const BackingToken21 = artifacts.require("BackingToken21");
-const BackingToken15 = artifacts.require("BackingToken15");
 const BackingToken6 = artifacts.require("BackingToken6");
 const TestDAI = artifacts.require("TestDAI");
 const TestUSDC = artifacts.require("TestUSDC");

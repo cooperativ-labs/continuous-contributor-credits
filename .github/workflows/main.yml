@@ -38,13 +38,13 @@ jobs:
     # Install deps
     - name: Install Dependencies
       run: |
-        npm install
+        yarn install
         export PATH=$PATH:./node_modules/.bin
     
     # Lint
     - name: Lint code
-      run: npx prettier --check "test" "migrations"
+      run: yarn prettier --check "test" "migrations"
       
     # Runs a single command using the runners shell
     - name: Test truffle
-      run: npx truffle test
+      run: yarn truffle test

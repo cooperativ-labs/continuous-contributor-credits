@@ -27,6 +27,7 @@ contract C2 is ERC20, Ownable {
     uint256 public totalAmountFunded = 0;
 
     mapping(address => uint256) public issuedToAddress;
+    mapping(address => uint256) public bacWithdrawn;
 
     constructor() public ERC20("ContributorCredits", "C^2") {}
 
@@ -88,8 +89,22 @@ contract C2 is ERC20, Ownable {
         if (issuedToAddress[_msgSender()] == 0 || totalAmountFunded == 0) {
             return;
         }
+        // proportion of funds earmarked for address is proportional to issuedToAddress/totalSupply
+        uint256 totalBacForAccount =
+            totalAmountFunded.mul(issuedToAddress[_msgSender()]).div(
+                totalSupply()
+            );
+        uint256 bacToReceive =
+            totalBacForAccount.sub(bacWithdrawn[_msgSender()]);
+
+        if (bacToReceive == 0) {
+            return;
+        }
+
         // at 100% funded, all C2 can be withdrawn. At n% funded, n% of C2 can be withdrawn.
         // Proportion funded can be calculated (handling the decimal conversion using the totalAmountNeededToFund)
+        // At some level C2 is purely aesthetic. BAC is distributed soley based on actual amount of money give to the
+        // contract and proportion of share that each contributor has.
         uint256 cashableC2 =
             issuedToAddress[_msgSender()].mul(totalAmountFunded).div(
                 totalBackingNeededToFund()
@@ -98,42 +113,12 @@ contract C2 is ERC20, Ownable {
             issuedToAddress[_msgSender()].sub(this.balanceOf(_msgSender()));
         uint256 c2ToCashOut = cashableC2.sub(alreadyCashedC2);
 
-        if (c2ToCashOut == 0) {
-            return;
-        }
-
-        // proportion of funds earmarked for address is proportional to issuedToAddress/totalSupply
-        uint256 totalBacForAccount =
-            totalAmountFunded.mul(issuedToAddress[_msgSender()]).div(
-                totalSupply()
-            );
-        // of this, the part that is still eligible for withdrawal is proportional to the proportion of cashableC2 eligible for withdrawal
-        uint256 bacToReceive =
-            totalBacForAccount.mul(c2ToCashOut).div(cashableC2);
-
         _transfer(_msgSender(), address(this), c2ToCashOut);
+        bacWithdrawn[_msgSender()] = bacWithdrawn[_msgSender()].add(
+            bacToReceive
+        );
         emit CashedOut(_msgSender(), c2ToCashOut, bacToReceive);
         backingToken.transfer(_msgSender(), bacToReceive);
-    }
-
-    function bac_2_c2(uint256 amount) public view returns (uint256) {
-        if (decimals() > backingToken.decimals()) {
-            return
-                amount.mul(uint256(10)**(decimals() - backingToken.decimals()));
-        } else {
-            return
-                amount.div(uint256(10)**(backingToken.decimals() - decimals()));
-        }
-    }
-
-    function c2_2_bac(uint256 amount) public view returns (uint256) {
-        if (decimals() > backingToken.decimals()) {
-            return
-                amount.div(uint256(10)**(decimals() - backingToken.decimals()));
-        } else {
-            return
-                amount.div(uint256(10)**(backingToken.decimals() - decimals()));
-        }
     }
 
     // TODO: Transfer function that handles withdrawn amount

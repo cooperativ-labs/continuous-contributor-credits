@@ -428,6 +428,24 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       expect(await c2.balanceOf(acc[1])).eq.BN(humanC2(50));
       expect(await c2.balanceOf(acc[2])).eq.BN(humanC2(150));
     });
+
+    it("increases bacWithdrawn when cashing out", async () => {
+      const toIssue = humanC2(100);
+      await c2.issue(acc[1], toIssue);
+
+      const toFund = humanBac(40);
+      await fundC2(toFund);
+      await c2.cashout({ from: acc[1] });
+      expect((await bac.balanceOf(acc[1])).sub(initBac[1])).eq.BN(toFund);
+      expect(await c2.bacWithdrawn(acc[1])).eq.BN(toFund);
+
+      await fundC2(toFund);
+      await c2.cashout({ from: acc[1] });
+      expect((await bac.balanceOf(acc[1])).sub(initBac[1])).eq.BN(
+        toFund.add(toFund)
+      );
+      expect(await c2.bacWithdrawn(acc[1])).eq.BN(toFund.add(toFund));
+    });
   });
 }
 

@@ -17,7 +17,6 @@ module.exports = function (deployer, network, accounts) {
   } else {
     deployer.deploy(BackingToken, accounts[0]);
     deployer.deploy(BackingToken21, accounts[0]);
-    deployer.deploy(BackingToken15, accounts[0]);
     deployer.deploy(BackingToken6, accounts[0]);
     return deployer.deploy(C2);
   }

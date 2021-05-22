@@ -168,38 +168,38 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       );
     });
 
-    it("increases a counter of issuedToAccount when issuing", async () => {
+    it("increases a counter of shares when issuing", async () => {
       const toIssue1 = humanC2(1234);
       const toIssue2 = humanC2(5678);
       await c2.issue(acc[1], toIssue1);
       await c2.issue(acc[2], toIssue2);
 
-      expect(await c2.issuedToAddress(acc[1])).eq.BN(toIssue1);
-      expect(await c2.issuedToAddress(acc[2])).eq.BN(toIssue2);
+      expect(await c2.shares(acc[1])).eq.BN(toIssue1);
+      expect(await c2.shares(acc[2])).eq.BN(toIssue2);
 
       await c2.issue(acc[1], toIssue2);
 
-      expect(await c2.issuedToAddress(acc[1])).eq.BN(toIssue1.add(toIssue2));
-      expect(await c2.issuedToAddress(acc[2])).eq.BN(toIssue2);
+      expect(await c2.shares(acc[1])).eq.BN(toIssue1.add(toIssue2));
+      expect(await c2.shares(acc[2])).eq.BN(toIssue2);
     });
 
-    it("decreases issuedToAccount when burning", async () => {
+    it("decreases shares when burning", async () => {
       const toIssue = humanC2(100);
       const toBurn = humanC2(10);
       await c2.issue(acc[1], toIssue);
-      expect(await c2.issuedToAddress(acc[1])).eq.BN(toIssue);
+      expect(await c2.shares(acc[1])).eq.BN(toIssue);
 
       await c2.burn(toBurn, { from: acc[1] });
-      expect(await c2.issuedToAddress(acc[1])).eq.BN(toIssue.sub(toBurn));
+      expect(await c2.shares(acc[1])).eq.BN(toIssue.sub(toBurn));
     });
 
-    it("does NOT decrease issuedToAccount when cashing out", async () => {
+    it("does NOT decrease shares when cashing out", async () => {
       const toIssue = humanC2(100);
       await c2.issue(acc[1], toIssue);
-      expect(await c2.issuedToAddress(acc[1])).eq.BN(toIssue);
+      expect(await c2.shares(acc[1])).eq.BN(toIssue);
 
       await c2.cashout({ from: acc[1] });
-      expect(await c2.issuedToAddress(acc[1])).eq.BN(toIssue);
+      expect(await c2.shares(acc[1])).eq.BN(toIssue);
     });
 
     it("can burn up to all held tokens, but no more", async () => {
@@ -462,8 +462,8 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         expect(await c2.balanceOf(acc[1])).to.eq.BN(0);
         expect(await c2.balanceOf(acc[2])).to.eq.BN(toIssue);
 
-        expect(await c2.issuedToAddress(acc[1])).to.eq.BN(0);
-        expect(await c2.issuedToAddress(acc[2])).to.eq.BN(toIssue);
+        expect(await c2.shares(acc[1])).to.eq.BN(0);
+        expect(await c2.shares(acc[2])).to.eq.BN(toIssue);
       });
 
       it("can transfer all tokens to an address that already has tokens", async () => {
@@ -477,8 +477,8 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         expect(await c2.balanceOf(acc[1])).to.eq.BN(0);
         expect(await c2.balanceOf(acc[2])).to.eq.BN(toIssue1.add(toIssue2));
 
-        expect(await c2.issuedToAddress(acc[1])).to.eq.BN(0);
-        expect(await c2.issuedToAddress(acc[2])).to.eq.BN(
+        expect(await c2.shares(acc[1])).to.eq.BN(0);
+        expect(await c2.shares(acc[2])).to.eq.BN(
           toIssue1.add(toIssue2)
         );
       });
@@ -501,8 +501,8 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         expect(await c2.balanceOf(acc[1])).to.eq.BN(0);
         expect(await c2.balanceOf(acc[2])).to.eq.BN(toIssue2.add(newBal1));
 
-        expect(await c2.issuedToAddress(acc[1])).to.eq.BN(0);
-        expect(await c2.issuedToAddress(acc[2])).to.eq.BN(
+        expect(await c2.shares(acc[1])).to.eq.BN(0);
+        expect(await c2.shares(acc[2])).to.eq.BN(
           toIssue2.add(toIssue1)
         );
 

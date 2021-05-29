@@ -253,21 +253,21 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         expect(await c3.cashableC3(acc[1])).to.eq.BN(0);
         expect(await c3.withdrawableBac(acc[1])).to.eq.BN(0);
 
-        await fundC3ToPercent(20)
+        await fundC3ToPercent(20);
 
-        expect(await c3.cashableC3(acc[1])).to.eq.BN(humanC3(20))
-        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(humanBac(20))
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(humanC3(20));
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(humanBac(20));
 
-        await c3.cashout({ from: acc[1] })
+        await c3.cashout({ from: acc[1] });
 
         expect(await c3.cashableC3(acc[1])).to.eq.BN(0);
         expect(await c3.withdrawableBac(acc[1])).to.eq.BN(0);
 
         await fundC3ToPercent(80);
 
-        expect(await c3.cashableC3(acc[1])).to.eq.BN(humanC3(60))
-        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(humanBac(60))
-      })
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(humanC3(60));
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(humanBac(60));
+      });
 
       it("does NOT decrease shares when cashing out", async () => {
         const toIssue = humanC3(100);

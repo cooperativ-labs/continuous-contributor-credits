@@ -93,9 +93,6 @@ contract C3 is ERC20, Ownable {
     event Burned(address indexed account, uint256 c3Burned);
 
     function burn(uint256 amount) public isLive {
-        // TODO: Only allow burning down to amount withdrawn
-        // Think about this more, logic may be complicated
-        // What happens to funding ratio
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
         shares[_msgSender()] = shares[_msgSender()].sub(amount);
@@ -143,8 +140,6 @@ contract C3 is ERC20, Ownable {
         backingToken.transfer(_msgSender(), bacToReceive);
     }
 
-    // TODO: Transfer function that handles withdrawn amount
-
     function bacBalance() public view returns (uint256) {
         return backingToken.balanceOf(address(this));
     }
@@ -190,10 +185,9 @@ contract C3 is ERC20, Ownable {
     event CompletelyFunded();
 
     function fund(uint256 amount) public isLive {
-        // TODO: fund function checks for extra funds (OPTIONAL)
         require(
             isFunded() == false,
-            "cannot fund a contract that is is already funded"
+            "cannot fund a contract that is is already completely funded"
         );
 
         uint256 remainingNeeded = remainingBackingNeededToFund();

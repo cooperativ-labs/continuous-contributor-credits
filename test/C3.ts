@@ -516,7 +516,7 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         const tx = await fundC3(toFund);
         expect(await c3.sharesFinalized()).is.true;
         truffleAssert.eventNotEmitted(tx, "SharesFinalized");
-      })
+      });
     });
 
     describe("transfer", () => {

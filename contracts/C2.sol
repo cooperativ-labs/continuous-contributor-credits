@@ -26,7 +26,7 @@ contract C2 is ERC20, Ownable {
 
     uint256 public totalAmountFunded = 0;
 
-    mapping(address => uint256) public issuedToAddress;
+    mapping(address => uint256) public shares;
     mapping(address => uint256) public bacWithdrawn;
 
     constructor() public ERC20("ContributorCredits", "C^2") {}
@@ -56,7 +56,7 @@ contract C2 is ERC20, Ownable {
         isNotLocked
     {
         _mint(account, amount);
-        issuedToAddress[account] = issuedToAddress[account].add(amount);
+        shares[account] = shares[account].add(amount);
         emit Issued(account, amount);
     }
 
@@ -75,10 +75,8 @@ contract C2 is ERC20, Ownable {
             "Only transfers of all tokens are allowed"
         );
 
-        issuedToAddress[recipient] = issuedToAddress[recipient].add(
-            issuedToAddress[_msgSender()]
-        );
-        issuedToAddress[_msgSender()] = 0;
+        shares[recipient] = shares[recipient].add(shares[_msgSender()]);
+        shares[_msgSender()] = 0;
 
         bacWithdrawn[recipient] = bacWithdrawn[recipient].add(
             bacWithdrawn[_msgSender()]
@@ -102,9 +100,7 @@ contract C2 is ERC20, Ownable {
         // What happens to funding ratio
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
-        issuedToAddress[_msgSender()] = issuedToAddress[_msgSender()].sub(
-            amount
-        );
+        shares[_msgSender()] = shares[_msgSender()].sub(amount);
         backingToken.transfer(this.owner(), associatedBacking);
         emit Burned(_msgSender(), amount);
     }
@@ -116,14 +112,12 @@ contract C2 is ERC20, Ownable {
     );
 
     function cashout() public isLive {
-        if (issuedToAddress[_msgSender()] == 0 || totalAmountFunded == 0) {
+        if (shares[_msgSender()] == 0 || totalAmountFunded == 0) {
             return;
         }
-        // proportion of funds earmarked for address is proportional to issuedToAddress/totalSupply
+        // proportion of funds earmarked for address is proportional to shares/totalSupply
         uint256 totalBacForAccount =
-            totalAmountFunded.mul(issuedToAddress[_msgSender()]).div(
-                totalSupply()
-            );
+            totalAmountFunded.mul(shares[_msgSender()]).div(totalSupply());
         uint256 bacToReceive =
             totalBacForAccount.sub(bacWithdrawn[_msgSender()]);
 
@@ -136,11 +130,11 @@ contract C2 is ERC20, Ownable {
         // At some level C2 is purely aesthetic. BAC is distributed soley based on actual amount of money give to the
         // contract and proportion of share that each contributor has.
         uint256 cashableC2 =
-            issuedToAddress[_msgSender()].mul(totalAmountFunded).div(
+            shares[_msgSender()].mul(totalAmountFunded).div(
                 totalBackingNeededToFund()
             );
         uint256 alreadyCashedC2 =
-            issuedToAddress[_msgSender()].sub(this.balanceOf(_msgSender()));
+            shares[_msgSender()].sub(this.balanceOf(_msgSender()));
         uint256 c2ToCashOut = cashableC2.sub(alreadyCashedC2);
 
         _transfer(_msgSender(), address(this), c2ToCashOut);

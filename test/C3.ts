@@ -176,15 +176,21 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       });
     });
 
-    describe("lock", () => {
-      it("only SU can lock", async () => {
-        await truffleAssert.reverts(c3.lock({ from: acc[1] }));
+    describe("finalize", () => {
+      it("owner can finalize", async () => {
+        const tx = await c3.finalize({ from: acc[0] });
+        truffleAssert.eventEmitted(tx, "SharesFinalized");
       });
 
-      it("can't issue tokens after locking", async () => {
-        const c3ToIssue = humanC3(1);
+      it("only owner can finalize", async () => {
+        await truffleAssert.reverts(c3.finalize({ from: acc[1] }));
+      });
 
-        await c3.lock({ from: acc[0] });
+      it("can't issue tokens after finalizing", async () => {
+        await issueToEveryone(humanC3(100));
+        await c3.finalize({ from: acc[0] });
+
+        const c3ToIssue = humanC3(1);
         await truffleAssert.reverts(c3.issue(acc[1], c3ToIssue));
       });
     });
@@ -459,13 +465,14 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         await truffleAssert.reverts(fundC3(humanBac(100)));
       });
 
-      it("auto-locks when contract is fully funded", async () => {
+      it("auto-finalizes when contract is fully funded", async () => {
         await issueToEveryone(humanC3(100));
         const toFund = await c3.remainingBackingNeededToFund();
 
-        expect(await c3.isLocked()).is.false;
-        await fundC3(toFund);
-        expect(await c3.isLocked()).is.true;
+        expect(await c3.sharesFinalized()).is.false;
+        const tx = await fundC3(toFund);
+        expect(await c3.sharesFinalized()).is.true;
+        truffleAssert.eventEmitted(tx, "SharesFinalized");
       });
     });
 

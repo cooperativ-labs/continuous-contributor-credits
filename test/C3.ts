@@ -233,9 +233,42 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
         expect(totalSupplyBefore.sub(totalSupplyAfter)).eq.BN(toBurn);
       });
+
+      it.only("does not allow burning when a cashout is available", async () => {
+        await c3.issue(acc[1], humanC3(100));
+        await fundC3ToPercent(50);
+
+        await truffleAssert.reverts(c3.burn(humanC3(1), { from: acc[1] }));
+
+        await c3.cashout({ from: acc[1] });
+        await c3.burn(humanC3(1), { from: acc[1] });
+      });
     });
 
     describe("cashout", () => {
+      it("can give info on the amount of c3/bac available to cashout", async () => {
+        await c3.issue(acc[1], 100);
+        await c3.issue(acc[2], 300);
+
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(0);
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(0);
+
+        await fundC3ToPercent(20)
+
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(humanC3(20))
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(humanBac(20))
+
+        await c3.cashout({ from: acc[1] })
+
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(0);
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(0);
+
+        await fundC3ToPercent(80);
+
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(humanC3(60))
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(humanBac(60))
+      })
+
       it("does NOT decrease shares when cashing out", async () => {
         const toIssue = humanC3(100);
         await c3.issue(acc[1], toIssue);

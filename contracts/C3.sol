@@ -95,9 +95,7 @@ contract C3 is ERC20, Ownable {
     event Burned(address indexed account, uint256 c3Burned);
 
     function burn(uint256 amount) public isLive {
-        // TODO: Only allow burning down to amount withdrawn
-        // Think about this more, logic may be complicated
-        // What happens to funding ratio
+
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
         shares[_msgSender()] = shares[_msgSender()].sub(amount);
@@ -111,31 +109,38 @@ contract C3 is ERC20, Ownable {
         uint256 bacReceived
     );
 
-    function cashout() public isLive {
-        if (shares[_msgSender()] == 0 || totalAmountFunded == 0) {
-            return;
-        }
+    function withdrawableBac(address account) public view returns (uint256) {
         // proportion of funds earmarked for address is proportional to shares/totalSupply
         uint256 totalBacForAccount =
-            totalAmountFunded.mul(shares[_msgSender()]).div(totalSupply());
-        uint256 bacToReceive =
-            totalBacForAccount.sub(bacWithdrawn[_msgSender()]);
+            totalAmountFunded.mul(shares[account]).div(totalSupply());
+        return totalBacForAccount.sub(bacWithdrawn[account]);
+    }
 
-        if (bacToReceive == 0) {
-            return;
-        }
-
+    function cashableC3(address account) public view returns (uint256) {
         // at 100% funded, all C3 can be withdrawn. At n% funded, n% of C3 can be withdrawn.
         // Proportion funded can be calculated (handling the decimal conversion using the totalAmountNeededToFund)
         // At some level C3 is purely aesthetic. BAC is distributed soley based on actual amount of money give to the
         // contract and proportion of share that each contributor has.
-        uint256 cashableC3 =
-            shares[_msgSender()].mul(totalAmountFunded).div(
+        uint256 fundedC3 =
+            shares[account].mul(totalAmountFunded).div(
                 totalBackingNeededToFund()
             );
         uint256 alreadyCashedC3 =
-            shares[_msgSender()].sub(this.balanceOf(_msgSender()));
-        uint256 c3ToCashOut = cashableC3.sub(alreadyCashedC3);
+            shares[account].sub(this.balanceOf(account));
+        return fundedC3.sub(alreadyCashedC3);
+    }
+
+    function cashout() public isLive {
+        if (shares[_msgSender()] == 0 || totalAmountFunded == 0) {
+            return;
+        }
+
+        uint256 bacToReceive = withdrawableBac(_msgSender());
+        if (bacToReceive == 0) {
+            return;
+        }
+
+        uint256 c3ToCashout = cashableC3(_msgSender());
 
         _transfer(_msgSender(), address(this), c3ToCashOut);
         bacWithdrawn[_msgSender()] = bacWithdrawn[_msgSender()].add(

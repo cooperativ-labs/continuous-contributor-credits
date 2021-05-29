@@ -105,350 +105,372 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       );
     });
 
-    it("starts unestablished, which prevents issuance", async () => {
-      const freshC2 = await C2.new();
-
-      expect(await freshC2.isEstablished()).is.false;
-      await truffleAssert.reverts(freshC2.issue(acc[1], 1));
-    });
-
-    it("can be established", async () => {
-      const freshC2 = await C2.new();
-      await freshC2.establish(bac.address, agreementHash);
-
-      expect(await freshC2.isEstablished()).is.true;
-      expect(await freshC2.totalSupply()).eq.BN(0);
-      expect(await bac.balanceOf(freshC2.address)).eq.BN(0);
-    });
-
-    it("cannot be established twice", async () => {
-      await truffleAssert.reverts(c2.establish(bac.address, agreementHash));
-    });
-
-    it("Can access version string", async () => {
-      expect(await c2.version()).equals("cc v0.2.0");
-    });
-
-    it("can retrieve backing token address", async () => {
-      const bacAddress = await c2.backingToken();
-      expect(bacAddress).equals(bac.address);
-    });
-
-    it("can retrieve agreement hash", async () => {
-      expect(await c2.agreementHash()).equals(agreementHash);
-    });
-
-    it("can issue tokens", async () => {
-      const c2ToIssue = humanC2(1);
-      const tx = await c2.issue(acc[1], c2ToIssue);
-
-      truffleAssert.eventEmitted(tx, "Issued", (ev: Issued["args"]) => {
-        return ev.account === acc[1] && ev.c2Issued.eq(c2ToIssue);
-      });
-      expect(await c2.balanceOf(acc[1])).eq.BN(c2ToIssue);
-    });
-
-    it("only SU can lock", async () => {
-      await truffleAssert.reverts(c2.lock({ from: acc[1] }));
-    });
-
-    it("can't issue tokens after locking", async () => {
-      const c2ToIssue = humanC2(1);
-
-      await c2.lock({ from: acc[0] });
-      await truffleAssert.reverts(c2.issue(acc[1], c2ToIssue));
-    });
-
-    it("does not allow non-owners to issue tokens", async () => {
-      const c2ToIssue = humanC2(1000);
-      await truffleAssert.reverts(
-        c2.issue(acc[1], c2ToIssue, { from: acc[1] })
-      );
-    });
-
-    it("increases a counter of shares when issuing", async () => {
-      const toIssue1 = humanC2(1234);
-      const toIssue2 = humanC2(5678);
-      await c2.issue(acc[1], toIssue1);
-      await c2.issue(acc[2], toIssue2);
-
-      expect(await c2.shares(acc[1])).eq.BN(toIssue1);
-      expect(await c2.shares(acc[2])).eq.BN(toIssue2);
-
-      await c2.issue(acc[1], toIssue2);
-
-      expect(await c2.shares(acc[1])).eq.BN(toIssue1.add(toIssue2));
-      expect(await c2.shares(acc[2])).eq.BN(toIssue2);
-    });
-
-    it("decreases shares when burning", async () => {
-      const toIssue = humanC2(100);
-      const toBurn = humanC2(10);
-      await c2.issue(acc[1], toIssue);
-      expect(await c2.shares(acc[1])).eq.BN(toIssue);
-
-      await c2.burn(toBurn, { from: acc[1] });
-      expect(await c2.shares(acc[1])).eq.BN(toIssue.sub(toBurn));
-    });
-
-    it("does NOT decrease shares when cashing out", async () => {
-      const toIssue = humanC2(100);
-      await c2.issue(acc[1], toIssue);
-      expect(await c2.shares(acc[1])).eq.BN(toIssue);
-
-      await c2.cashout({ from: acc[1] });
-      expect(await c2.shares(acc[1])).eq.BN(toIssue);
-    });
-
-    it("can burn up to all held tokens, but no more", async () => {
-      const toIssue = humanC2(100);
-      const firstBurn = humanC2(20);
-      const secondBurn = humanC2(80);
-      expect(firstBurn.add(secondBurn)).eq.BN(toIssue);
-      const overdraftAmount = 1; //1 of the smallest decimal, not human
-
-      await c2.issue(acc[1], toIssue);
-
-      const tx = await c2.burn(firstBurn, { from: acc[1] });
-      truffleAssert.eventEmitted(tx, "Burned", (ev: Burned["args"]) => {
-        return ev.account === acc[1] && ev.c2Burned.eq(firstBurn);
+    describe("interface", () => {
+      it("Can access version string", async () => {
+        expect(await c2.version()).equals("cc v0.2.0");
       });
 
-      const tx2 = await c2.burn(secondBurn, { from: acc[1] });
-      truffleAssert.eventEmitted(tx2, "Burned", (ev: Burned["args"]) => {
-        return ev.account === acc[1] && ev.c2Burned.eq(secondBurn);
+      it("can retrieve backing token address", async () => {
+        const bacAddress = await c2.backingToken();
+        expect(bacAddress).equals(bac.address);
       });
 
-      await truffleAssert.reverts(c2.burn(overdraftAmount, { from: acc[1] }));
-    });
-
-    it("reduces totalSupply when burning", async () => {
-      await issueToEveryone(humanC2(100));
-      const toBurn = humanC2(5);
-
-      const totalSupplyBefore = await c2.totalSupply();
-      await c2.burn(toBurn, { from: acc[1] });
-
-      const totalSupplyAfter = await c2.totalSupply();
-
-      expect(totalSupplyBefore.sub(totalSupplyAfter)).eq.BN(toBurn);
-    });
-
-    it("does NOT reduce totalSupply when cashing out", async () => {
-      await issueToEveryone(humanC2(100));
-
-      const totalSupplyBefore = await c2.totalSupply();
-
-      await fundC2(humanBac(20));
-      await c2.cashout({ from: acc[1] });
-
-      const totalSupplyAfter = await c2.totalSupply();
-
-      expect(totalSupplyBefore).eq.BN(totalSupplyAfter);
-    });
-
-    it("cashout is idempotent", async () => {
-      await issueToEveryone(humanC2(100));
-
-      await fundC2(humanBac(20));
-      await c2.cashout({ from: acc[1] });
-
-      const totalSupplyAfter_1 = await c2.totalSupply();
-      const amountC2_1 = await c2.balanceOf(acc[1]);
-      const amountBac_1 = await bac.balanceOf(acc[1]);
-
-      await c2.cashout({ from: acc[1] });
-      const totalSupplyAfter_2 = await c2.totalSupply();
-      const amountC2_2 = await c2.balanceOf(acc[1]);
-      const amountBac_2 = await bac.balanceOf(acc[1]);
-
-      expect(totalSupplyAfter_1).eq.BN(totalSupplyAfter_2);
-      expect(amountC2_1).eq.BN(amountC2_2);
-      expect(amountBac_1).eq.BN(amountBac_2);
-      expect(amountC2_1).lt.BN(humanC2(100));
-    });
-
-    it("reports total BAC needed to be fully funded", async () => {
-      const toIssue = humanC2(3000);
-
-      // Starts "funded", but once tokens are issued, should not considered funded
-      expect(await c2.isFunded()).is.true;
-      await c2.issue(acc[1], toIssue);
-      expect(await c2.isFunded()).is.false;
-
-      const amountNeededToFund = await c2.totalBackingNeededToFund();
-      const remainingToFund = await c2.remainingBackingNeededToFund();
-      expect(amountNeededToFund).eq.BN(remainingToFund);
-      expect(amountNeededToFund).gt.BN(0);
-
-      const firstFunding = amountNeededToFund.div(new BN(10));
-      const txPartialFund1 = await fundC2(firstFunding);
-      truffleAssert.eventNotEmitted(txPartialFund1, "CompletelyFunded");
-
-      const amountNeededToFund2 = await c2.totalBackingNeededToFund();
-      const remainingToFund2 = await c2.remainingBackingNeededToFund();
-      expect(amountNeededToFund).eq.BN(amountNeededToFund2);
-      expect(remainingToFund2).eq.BN(amountNeededToFund.sub(firstFunding));
-      expect(await c2.isFunded()).is.false;
-
-      // Fund remaining
-      const tx = await fundC2(remainingToFund2);
-      truffleAssert.eventEmitted(tx, "CompletelyFunded");
-
-      expect(await c2.isFunded()).is.true;
-      const remainingToFund3 = await c2.remainingBackingNeededToFund();
-      expect(remainingToFund3).eq.BN(0);
-    });
-
-    it("can be (partially) funded", async () => {
-      const toIssue = humanC2(100);
-      await c2.issue(acc[1], toIssue);
-      const contractBacBal = await c2.bacBalance();
-
-      const toFund = humanBac(20);
-      const funder = acc[3];
-      const funderInitBac = initBac[3];
-      const tx = await fundC2(toFund, { from: funder });
-
-      truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
-        return ev.account === funder && ev.bacFunded.eq(toFund);
+      it("can retrieve agreement hash", async () => {
+        expect(await c2.agreementHash()).equals(agreementHash);
       });
-      expect(await bac.balanceOf(funder)).eq.BN(funderInitBac.sub(toFund));
-      const contractBacBalAfter = await c2.bacBalance();
-      expect(contractBacBal.add(toFund)).eq.BN(contractBacBalAfter);
-
-      expect(await c2.isFunded()).is.false;
-      expect(await c2.remainingBackingNeededToFund()).eq.BN(humanBac(80));
     });
 
-    it("fund updates totalAmountFunded", async () => {
-      await c2.issue(acc[3], humanC2(1000));
-      const toFund = humanBac(250);
-      const funder = acc[1];
-      const totalFunded = await c2.totalAmountFunded();
+    describe("establish", () => {
+      it("starts unestablished, which prevents issuance", async () => {
+        const freshC2 = await C2.new();
 
-      await fundC2(toFund, { from: funder });
-      const totalFundedAfter = await c2.totalAmountFunded();
-
-      expect(totalFunded.add(toFund)).eq.BN(totalFundedAfter);
-
-      await fundC2(toFund, { from: funder });
-      const totalFundedAfterAnother = await c2.totalAmountFunded();
-
-      expect(totalFundedAfter.add(toFund)).eq.BN(totalFundedAfterAnother);
-    });
-
-    it("uses 100 human Bac to fund 100 human C2, regardless of decimals", async () => {
-      await c2.issue(acc[1], humanC2(100));
-      const tx = await fundC2(humanBac(100));
-
-      truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
-        return ev.bacFunded.eq(humanBac(100));
+        expect(await freshC2.isEstablished()).is.false;
+        await truffleAssert.reverts(freshC2.issue(acc[1], 1));
       });
-      truffleAssert.eventEmitted(tx, "CompletelyFunded");
-      expect(await c2.isFunded()).is.true;
-    });
 
-    it("refunds overfunding to funder", async () => {
-      await issueToEveryone(humanC2(100));
-      const bacNeededToFund = await c2.remainingBackingNeededToFund();
-      const bacToOverpay = humanBac(30);
-      const tryToFund = bacNeededToFund.add(bacToOverpay);
-      const funder = acc[1];
-      const funderInitBac = initBac[1];
+      it("can be established", async () => {
+        const freshC2 = await C2.new();
+        await freshC2.establish(bac.address, agreementHash);
 
-      expect(await bac.balanceOf(funder)).eq.BN(funderInitBac);
-      const tx = await fundC2(tryToFund, { from: funder });
-
-      truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
-        // Actual amount funded is only the amount needed not the amount
-        return ev.account === funder && ev.bacFunded.eq(bacNeededToFund);
+        expect(await freshC2.isEstablished()).is.true;
+        expect(await freshC2.totalSupply()).eq.BN(0);
+        expect(await bac.balanceOf(freshC2.address)).eq.BN(0);
       });
-      truffleAssert.eventEmitted(tx, "CompletelyFunded");
 
-      expect(await bac.balanceOf(funder)).eq.BN(
-        funderInitBac.sub(bacNeededToFund)
-      );
+      it("cannot be established twice", async () => {
+        await truffleAssert.reverts(c2.establish(bac.address, agreementHash));
+      });
     });
 
-    it("reverts if trying to fund before any tokens have been issued", async () => {
-      await truffleAssert.reverts(fundC2(1));
-      await truffleAssert.reverts(fundC2(humanBac(100)));
+    describe("issue", () => {
+      it("can issue tokens", async () => {
+        const c2ToIssue = humanC2(1);
+        const tx = await c2.issue(acc[1], c2ToIssue);
+
+        truffleAssert.eventEmitted(tx, "Issued", (ev: Issued["args"]) => {
+          return ev.account === acc[1] && ev.c2Issued.eq(c2ToIssue);
+        });
+        expect(await c2.balanceOf(acc[1])).eq.BN(c2ToIssue);
+      });
+
+      it("does not allow non-owners to issue tokens", async () => {
+        const c2ToIssue = humanC2(1000);
+        await truffleAssert.reverts(
+          c2.issue(acc[1], c2ToIssue, { from: acc[1] })
+        );
+      });
+
+      it("increases a counter of shares when issuing", async () => {
+        const toIssue1 = humanC2(1234);
+        const toIssue2 = humanC2(5678);
+        await c2.issue(acc[1], toIssue1);
+        await c2.issue(acc[2], toIssue2);
+
+        expect(await c2.shares(acc[1])).eq.BN(toIssue1);
+        expect(await c2.shares(acc[2])).eq.BN(toIssue2);
+
+        await c2.issue(acc[1], toIssue2);
+
+        expect(await c2.shares(acc[1])).eq.BN(toIssue1.add(toIssue2));
+        expect(await c2.shares(acc[2])).eq.BN(toIssue2);
+      });
     });
 
-    it("reverts if funded when already completely funded", async () => {
-      await issueToEveryone(humanC2(100));
-      const toFund = await c2.remainingBackingNeededToFund();
-      await fundC2(toFund);
+    describe("lock", () => {
+      it("only SU can lock", async () => {
+        await truffleAssert.reverts(c2.lock({ from: acc[1] }));
+      });
 
-      await truffleAssert.reverts(fundC2(1));
-      await truffleAssert.reverts(fundC2(humanBac(100)));
+      it("can't issue tokens after locking", async () => {
+        const c2ToIssue = humanC2(1);
+
+        await c2.lock({ from: acc[0] });
+        await truffleAssert.reverts(c2.issue(acc[1], c2ToIssue));
+      });
     });
 
-    it("auto-locks when contract is fully funded", async () => {
-      await issueToEveryone(humanC2(100));
-      const toFund = await c2.remainingBackingNeededToFund();
+    describe("burn", () => {
+      it("decreases shares when burning", async () => {
+        const toIssue = humanC2(100);
+        const toBurn = humanC2(10);
+        await c2.issue(acc[1], toIssue);
+        expect(await c2.shares(acc[1])).eq.BN(toIssue);
 
-      expect(await c2.isLocked()).is.false;
-      await fundC2(toFund);
-      expect(await c2.isLocked()).is.true;
+        await c2.burn(toBurn, { from: acc[1] });
+        expect(await c2.shares(acc[1])).eq.BN(toIssue.sub(toBurn));
+      });
+
+      it("can burn up to all held tokens, but no more", async () => {
+        const toIssue = humanC2(100);
+        const firstBurn = humanC2(20);
+        const secondBurn = humanC2(80);
+        expect(firstBurn.add(secondBurn)).eq.BN(toIssue);
+        const overdraftAmount = 1; //1 of the smallest decimal, not human
+
+        await c2.issue(acc[1], toIssue);
+
+        const tx = await c2.burn(firstBurn, { from: acc[1] });
+        truffleAssert.eventEmitted(tx, "Burned", (ev: Burned["args"]) => {
+          return ev.account === acc[1] && ev.c2Burned.eq(firstBurn);
+        });
+
+        const tx2 = await c2.burn(secondBurn, { from: acc[1] });
+        truffleAssert.eventEmitted(tx2, "Burned", (ev: Burned["args"]) => {
+          return ev.account === acc[1] && ev.c2Burned.eq(secondBurn);
+        });
+
+        await truffleAssert.reverts(c2.burn(overdraftAmount, { from: acc[1] }));
+      });
+
+      it("reduces totalSupply when burning", async () => {
+        await issueToEveryone(humanC2(100));
+        const toBurn = humanC2(5);
+
+        const totalSupplyBefore = await c2.totalSupply();
+        await c2.burn(toBurn, { from: acc[1] });
+
+        const totalSupplyAfter = await c2.totalSupply();
+
+        expect(totalSupplyBefore.sub(totalSupplyAfter)).eq.BN(toBurn);
+      });
+    });
+
+    describe("cashout", () => {
+      it("does NOT decrease shares when cashing out", async () => {
+        const toIssue = humanC2(100);
+        await c2.issue(acc[1], toIssue);
+        expect(await c2.shares(acc[1])).eq.BN(toIssue);
+
+        await c2.cashout({ from: acc[1] });
+        expect(await c2.shares(acc[1])).eq.BN(toIssue);
+      });
+
+      it("does NOT reduce totalSupply when cashing out", async () => {
+        await issueToEveryone(humanC2(100));
+
+        const totalSupplyBefore = await c2.totalSupply();
+
+        await fundC2(humanBac(20));
+        await c2.cashout({ from: acc[1] });
+
+        const totalSupplyAfter = await c2.totalSupply();
+
+        expect(totalSupplyBefore).eq.BN(totalSupplyAfter);
+      });
+
+      it("cashout is idempotent", async () => {
+        await issueToEveryone(humanC2(100));
+
+        await fundC2(humanBac(20));
+        await c2.cashout({ from: acc[1] });
+
+        const totalSupplyAfter_1 = await c2.totalSupply();
+        const amountC2_1 = await c2.balanceOf(acc[1]);
+        const amountBac_1 = await bac.balanceOf(acc[1]);
+
+        await c2.cashout({ from: acc[1] });
+        const totalSupplyAfter_2 = await c2.totalSupply();
+        const amountC2_2 = await c2.balanceOf(acc[1]);
+        const amountBac_2 = await bac.balanceOf(acc[1]);
+
+        expect(totalSupplyAfter_1).eq.BN(totalSupplyAfter_2);
+        expect(amountC2_1).eq.BN(amountC2_2);
+        expect(amountBac_1).eq.BN(amountBac_2);
+        expect(amountC2_1).lt.BN(humanC2(100));
+      });
+
+      it("can be cashed out up to the proportion funded", async () => {
+        await c2.issue(acc[1], humanC2(100));
+        await c2.issue(acc[2], humanC2(300));
+
+        // fund to 50%
+        await fundC2(humanBac(200));
+
+        // Users withdraw tokens, should get 50% of their tokens worth of bac
+        const tx1 = await c2.cashout({ from: acc[1] });
+        truffleAssert.eventEmitted(
+          tx1,
+          "CashedOut",
+          (ev: CashedOut["args"]) => {
+            return (
+              ev.account == acc[1] &&
+              ev.c2CashedOut.eq(humanC2(50)) &&
+              ev.bacReceived.eq(humanBac(50))
+            );
+          }
+        );
+        const acc1Delta = (await bac.balanceOf(acc[1])).sub(initBac[1]);
+        expect(acc1Delta).eq.BN(humanBac(50));
+
+        const tx2 = await c2.cashout({ from: acc[2] });
+        truffleAssert.eventEmitted(
+          tx2,
+          "CashedOut",
+          (ev: CashedOut["args"]) => {
+            return (
+              ev.account == acc[2] &&
+              ev.c2CashedOut.eq(humanC2(150)) &&
+              ev.bacReceived.eq(humanBac(150))
+            );
+          }
+        );
+        const acc2Delta = (await bac.balanceOf(acc[2])).sub(initBac[2]);
+        expect(acc2Delta).eq.BN(humanBac(150));
+
+        // the c2 amount is updated
+        expect(await c2.balanceOf(acc[1])).eq.BN(humanC2(50));
+        expect(await c2.balanceOf(acc[2])).eq.BN(humanC2(150));
+      });
+
+      it("increases bacWithdrawn when cashing out", async () => {
+        const toIssue = humanC2(100);
+        await c2.issue(acc[1], toIssue);
+
+        const toFund = humanBac(40);
+        await fundC2(toFund);
+        await c2.cashout({ from: acc[1] });
+        expect((await bac.balanceOf(acc[1])).sub(initBac[1])).eq.BN(toFund);
+        expect(await c2.bacWithdrawn(acc[1])).eq.BN(toFund);
+
+        await fundC2(toFund);
+        await c2.cashout({ from: acc[1] });
+        expect((await bac.balanceOf(acc[1])).sub(initBac[1])).eq.BN(
+          toFund.add(toFund)
+        );
+        expect(await c2.bacWithdrawn(acc[1])).eq.BN(toFund.add(toFund));
+      });
+    });
+
+    describe("fund", () => {
+      it("can be (partially) funded", async () => {
+        const toIssue = humanC2(100);
+        await c2.issue(acc[1], toIssue);
+        const contractBacBal = await c2.bacBalance();
+
+        const toFund = humanBac(20);
+        const funder = acc[3];
+        const funderInitBac = initBac[3];
+        const tx = await fundC2(toFund, { from: funder });
+
+        truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
+          return ev.account === funder && ev.bacFunded.eq(toFund);
+        });
+        expect(await bac.balanceOf(funder)).eq.BN(funderInitBac.sub(toFund));
+        const contractBacBalAfter = await c2.bacBalance();
+        expect(contractBacBal.add(toFund)).eq.BN(contractBacBalAfter);
+
+        expect(await c2.isFunded()).is.false;
+        expect(await c2.remainingBackingNeededToFund()).eq.BN(humanBac(80));
+      });
+
+      it("fund updates totalAmountFunded", async () => {
+        await c2.issue(acc[3], humanC2(1000));
+        const toFund = humanBac(250);
+        const funder = acc[1];
+        const totalFunded = await c2.totalAmountFunded();
+
+        await fundC2(toFund, { from: funder });
+        const totalFundedAfter = await c2.totalAmountFunded();
+
+        expect(totalFunded.add(toFund)).eq.BN(totalFundedAfter);
+
+        await fundC2(toFund, { from: funder });
+        const totalFundedAfterAnother = await c2.totalAmountFunded();
+
+        expect(totalFundedAfter.add(toFund)).eq.BN(totalFundedAfterAnother);
+      });
+
+      it("reports total BAC needed to be fully funded", async () => {
+        const toIssue = humanC2(3000);
+
+        // Starts "funded", but once tokens are issued, should not considered funded
+        expect(await c2.isFunded()).is.true;
+        await c2.issue(acc[1], toIssue);
+        expect(await c2.isFunded()).is.false;
+
+        const amountNeededToFund = await c2.totalBackingNeededToFund();
+        const remainingToFund = await c2.remainingBackingNeededToFund();
+        expect(amountNeededToFund).eq.BN(remainingToFund);
+        expect(amountNeededToFund).gt.BN(0);
+
+        const firstFunding = amountNeededToFund.div(new BN(10));
+        const txPartialFund1 = await fundC2(firstFunding);
+        truffleAssert.eventNotEmitted(txPartialFund1, "CompletelyFunded");
+
+        const amountNeededToFund2 = await c2.totalBackingNeededToFund();
+        const remainingToFund2 = await c2.remainingBackingNeededToFund();
+        expect(amountNeededToFund).eq.BN(amountNeededToFund2);
+        expect(remainingToFund2).eq.BN(amountNeededToFund.sub(firstFunding));
+        expect(await c2.isFunded()).is.false;
+
+        // Fund remaining
+        const tx = await fundC2(remainingToFund2);
+        truffleAssert.eventEmitted(tx, "CompletelyFunded");
+
+        expect(await c2.isFunded()).is.true;
+        const remainingToFund3 = await c2.remainingBackingNeededToFund();
+        expect(remainingToFund3).eq.BN(0);
+      });
+
+      it("uses 100 human Bac to fund 100 human C2", async () => {
+        await c2.issue(acc[1], humanC2(100));
+        const tx = await fundC2(humanBac(100));
+
+        truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
+          return ev.bacFunded.eq(humanBac(100));
+        });
+        truffleAssert.eventEmitted(tx, "CompletelyFunded");
+        expect(await c2.isFunded()).is.true;
+      });
+
+      it("refunds overfunding to funder", async () => {
+        await issueToEveryone(humanC2(100));
+        const bacNeededToFund = await c2.remainingBackingNeededToFund();
+        const bacToOverpay = humanBac(30);
+        const tryToFund = bacNeededToFund.add(bacToOverpay);
+        const funder = acc[1];
+        const funderInitBac = initBac[1];
+
+        expect(await bac.balanceOf(funder)).eq.BN(funderInitBac);
+        const tx = await fundC2(tryToFund, { from: funder });
+
+        truffleAssert.eventEmitted(tx, "Funded", (ev: Funded["args"]) => {
+          // Actual amount funded is only the amount needed not the amount
+          return ev.account === funder && ev.bacFunded.eq(bacNeededToFund);
+        });
+        truffleAssert.eventEmitted(tx, "CompletelyFunded");
+
+        expect(await bac.balanceOf(funder)).eq.BN(
+          funderInitBac.sub(bacNeededToFund)
+        );
+      });
+
+      it("reverts if trying to fund before any tokens have been issued", async () => {
+        await truffleAssert.reverts(fundC2(1));
+        await truffleAssert.reverts(fundC2(humanBac(100)));
+      });
+
+      it("reverts if funded when already completely funded", async () => {
+        await issueToEveryone(humanC2(100));
+        const toFund = await c2.remainingBackingNeededToFund();
+        await fundC2(toFund);
+
+        await truffleAssert.reverts(fundC2(1));
+        await truffleAssert.reverts(fundC2(humanBac(100)));
+      });
+
+      it("auto-locks when contract is fully funded", async () => {
+        await issueToEveryone(humanC2(100));
+        const toFund = await c2.remainingBackingNeededToFund();
+
+        expect(await c2.isLocked()).is.false;
+        await fundC2(toFund);
+        expect(await c2.isLocked()).is.true;
+      });
     });
 
     it.skip("what does it do if someone tries burning when they have stuff available to cashout (particuarly after the contract is already funded)?", async () => {
       expect.fail();
-    });
-
-    it("can be cashed out up to the proportion funded", async () => {
-      await c2.issue(acc[1], humanC2(100));
-      await c2.issue(acc[2], humanC2(300));
-
-      // fund to 50%
-      await fundC2(humanBac(200));
-
-      // Users withdraw tokens, should get 50% of their tokens worth of bac
-      const tx1 = await c2.cashout({ from: acc[1] });
-      truffleAssert.eventEmitted(tx1, "CashedOut", (ev: CashedOut["args"]) => {
-        return (
-          ev.account == acc[1] &&
-          ev.c2CashedOut.eq(humanC2(50)) &&
-          ev.bacReceived.eq(humanBac(50))
-        );
-      });
-      const acc1Delta = (await bac.balanceOf(acc[1])).sub(initBac[1]);
-      expect(acc1Delta).eq.BN(humanBac(50));
-
-      const tx2 = await c2.cashout({ from: acc[2] });
-      truffleAssert.eventEmitted(tx2, "CashedOut", (ev: CashedOut["args"]) => {
-        return (
-          ev.account == acc[2] &&
-          ev.c2CashedOut.eq(humanC2(150)) &&
-          ev.bacReceived.eq(humanBac(150))
-        );
-      });
-      const acc2Delta = (await bac.balanceOf(acc[2])).sub(initBac[2]);
-      expect(acc2Delta).eq.BN(humanBac(150));
-
-      // the c2 amount is updated
-      expect(await c2.balanceOf(acc[1])).eq.BN(humanC2(50));
-      expect(await c2.balanceOf(acc[2])).eq.BN(humanC2(150));
-    });
-
-    it("increases bacWithdrawn when cashing out", async () => {
-      const toIssue = humanC2(100);
-      await c2.issue(acc[1], toIssue);
-
-      const toFund = humanBac(40);
-      await fundC2(toFund);
-      await c2.cashout({ from: acc[1] });
-      expect((await bac.balanceOf(acc[1])).sub(initBac[1])).eq.BN(toFund);
-      expect(await c2.bacWithdrawn(acc[1])).eq.BN(toFund);
-
-      await fundC2(toFund);
-      await c2.cashout({ from: acc[1] });
-      expect((await bac.balanceOf(acc[1])).sub(initBac[1])).eq.BN(
-        toFund.add(toFund)
-      );
-      expect(await c2.bacWithdrawn(acc[1])).eq.BN(toFund.add(toFund));
     });
 
     describe("transfer", () => {

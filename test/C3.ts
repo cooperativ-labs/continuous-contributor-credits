@@ -3,7 +3,7 @@ import {
   BackingToken6Contract,
   BackingTokenContract,
   BackingTokenInstance,
-  C2Instance,
+  C3Instance,
 } from "../types/truffle-contracts";
 import {
   AllEvents,
@@ -11,9 +11,9 @@ import {
   CashedOut,
   Funded,
   Issued,
-} from "../types/truffle-contracts/C2";
+} from "../types/truffle-contracts/C3";
 
-const C2 = artifacts.require("C2");
+const C3 = artifacts.require("C3");
 const BAC = artifacts.require("BackingToken");
 
 type AnyBac =
@@ -35,7 +35,7 @@ const agreementHash =
 export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
   contract(`C3 backed by BAC${bacDec}`, async (acc: string[]) => {
     // define s few variables with let for ease of use (don't have to use `this` all the time)
-    let c3: C2Instance, bac: BackingTokenInstance;
+    let c3: C3Instance, bac: BackingTokenInstance;
     let initBac: BN[];
 
     // handy functions for working with human numbers
@@ -82,7 +82,7 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       const bacDecimals = await bac.decimals();
       expect(bacDecimals).eq.BN(bacDec);
 
-      c3 = await C2.deployed();
+      c3 = await C3.deployed();
       expect(await c3.decimals()).eq.BN(c3Decimals);
 
       // Give everyone a heaping supply of BAC
@@ -95,7 +95,7 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
     beforeEach(async () => {
       // fresh c3 contract for every test
-      c3 = await C2.new();
+      c3 = await C3.new();
       await c3.establish(bac.address, agreementHash);
 
       initBac = await Promise.all(
@@ -122,14 +122,14 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
     describe("establish", () => {
       it("starts unestablished, which prevents issuance", async () => {
-        const freshC2 = await C2.new();
+        const freshC2 = await C3.new();
 
         expect(await freshC2.isEstablished()).is.false;
         await truffleAssert.reverts(freshC2.issue(acc[1], 1));
       });
 
       it("can be established", async () => {
-        const freshC2 = await C2.new();
+        const freshC2 = await C3.new();
         await freshC2.establish(bac.address, agreementHash);
 
         expect(await freshC2.isEstablished()).is.true;
@@ -144,19 +144,19 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
     describe("issue", () => {
       it("can issue tokens", async () => {
-        const c2ToIssue = humanC3(1);
-        const tx = await c3.issue(acc[1], c2ToIssue);
+        const c3ToIssue = humanC3(1);
+        const tx = await c3.issue(acc[1], c3ToIssue);
 
         truffleAssert.eventEmitted(tx, "Issued", (ev: Issued["args"]) => {
-          return ev.account === acc[1] && ev.c2Issued.eq(c2ToIssue);
+          return ev.account === acc[1] && ev.c3Issued.eq(c3ToIssue);
         });
-        expect(await c3.balanceOf(acc[1])).eq.BN(c2ToIssue);
+        expect(await c3.balanceOf(acc[1])).eq.BN(c3ToIssue);
       });
 
       it("does not allow non-owners to issue tokens", async () => {
-        const c2ToIssue = humanC3(1000);
+        const c3ToIssue = humanC3(1000);
         await truffleAssert.reverts(
-          c3.issue(acc[1], c2ToIssue, { from: acc[1] })
+          c3.issue(acc[1], c3ToIssue, { from: acc[1] })
         );
       });
 
@@ -182,10 +182,10 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       });
 
       it("can't issue tokens after locking", async () => {
-        const c2ToIssue = humanC3(1);
+        const c3ToIssue = humanC3(1);
 
         await c3.lock({ from: acc[0] });
-        await truffleAssert.reverts(c3.issue(acc[1], c2ToIssue));
+        await truffleAssert.reverts(c3.issue(acc[1], c3ToIssue));
       });
     });
 
@@ -211,12 +211,12 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
         const tx = await c3.burn(firstBurn, { from: acc[1] });
         truffleAssert.eventEmitted(tx, "Burned", (ev: Burned["args"]) => {
-          return ev.account === acc[1] && ev.c2Burned.eq(firstBurn);
+          return ev.account === acc[1] && ev.c3Burned.eq(firstBurn);
         });
 
         const tx2 = await c3.burn(secondBurn, { from: acc[1] });
         truffleAssert.eventEmitted(tx2, "Burned", (ev: Burned["args"]) => {
-          return ev.account === acc[1] && ev.c2Burned.eq(secondBurn);
+          return ev.account === acc[1] && ev.c3Burned.eq(secondBurn);
         });
 
         await truffleAssert.reverts(c3.burn(overdraftAmount, { from: acc[1] }));
@@ -294,7 +294,7 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
           (ev: CashedOut["args"]) => {
             return (
               ev.account == acc[1] &&
-              ev.c2CashedOut.eq(humanC3(50)) &&
+              ev.c3CashedOut.eq(humanC3(50)) &&
               ev.bacReceived.eq(humanBac(50))
             );
           }
@@ -309,7 +309,7 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
           (ev: CashedOut["args"]) => {
             return (
               ev.account == acc[2] &&
-              ev.c2CashedOut.eq(humanC3(150)) &&
+              ev.c3CashedOut.eq(humanC3(150)) &&
               ev.bacReceived.eq(humanBac(150))
             );
           }
@@ -412,7 +412,7 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         expect(remainingToFund3).eq.BN(0);
       });
 
-      it("uses 100 human Bac to fund 100 human C2", async () => {
+      it("uses 100 human Bac to fund 100 human C3", async () => {
         await c3.issue(acc[1], humanC3(100));
         const tx = await fundC3(humanBac(100));
 
@@ -546,6 +546,6 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
   });
 }
 
-describe("C2", async () => {
+describe("C3", async () => {
   await testBacDecimals(BAC, 18);
 });

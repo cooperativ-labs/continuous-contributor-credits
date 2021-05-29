@@ -6,7 +6,7 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-contract C2 is ERC20, Ownable {
+contract C3 is ERC20, Ownable {
     string public constant version = "C3 v1.0.0";
 
     ERC20 public backingToken;

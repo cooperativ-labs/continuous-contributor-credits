@@ -21,17 +21,24 @@ jobs:
     steps:
     # Checks-out your repository under $GITHUB_WORKSPACE, so your job can access it
     - uses: actions/checkout@v2
-    
+
+    # Cache yarn dependencies
+    - uses: actions/cache@v2
+      id: yarn-cache # use this to check for `cache-hit` (`steps.yarn-cache.outputs.cache-hit != 'true'`)
+      with:
+        path: '**/node_modules'
+        key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
+
     # Install deps
     - name: Install Dependencies
       run: |
-        npm install
+        yarn install --frozen-lockfile
         export PATH=$PATH:./node_modules/.bin
     
     # Lint
     - name: Lint code
-      run: npx prettier --check "test" "migrations"
+      run: yarn prettier --check "test" "migrations"
       
     # Runs a single command using the runners shell
     - name: Test truffle
-      run: npx truffle test
+      run: yarn truffle test

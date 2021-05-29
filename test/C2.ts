@@ -15,8 +15,6 @@ import {
 
 const C2 = artifacts.require("C2");
 const BAC = artifacts.require("BackingToken");
-const BAC21 = artifacts.require("BackingToken21");
-const BAC6 = artifacts.require("BackingToken6");
 
 type AnyBac =
   | BackingTokenContract
@@ -34,7 +32,7 @@ chai.use(bnChai(BN));
 const agreementHash =
   "0x9e058097cb6c2dc3fa44b5d97f28bf729eed745cb6a061c3ea7176cb14d77296";
 
-async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
+export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
   contract(`C2 backed by BAC${bacDec}`, async (acc: string[]) => {
     // define s few variables with let for ease of use (don't have to use `this` all the time)
     let c2: C2Instance, bac: BackingTokenInstance;
@@ -528,6 +526,4 @@ async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
 describe("C2", async () => {
   await testBacDecimals(BAC, 18);
-  await testBacDecimals(BAC21, 21);
-  await testBacDecimals(BAC6, 6);
 });

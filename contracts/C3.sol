@@ -31,11 +31,7 @@ contract C3 is ERC20, Ownable {
 
     constructor() public ERC20("Continuous Contributor Credits", "C3") {}
 
-    bool public isLocked = false;
-    modifier isNotLocked() {
-        require(isLocked == false, "token must not be locked to use");
-        _;
-    }
+    bool public sharesFinalized = false;
 
     function establish(ERC20 backingTokenAddress, bytes32 agreement)
         public
@@ -49,19 +45,21 @@ contract C3 is ERC20, Ownable {
 
     event Issued(address indexed account, uint256 c3Issued);
 
-    function issue(address account, uint256 amount)
-        public
-        onlyOwner
-        isLive
-        isNotLocked
-    {
+    function issue(address account, uint256 amount) public onlyOwner isLive {
+        require(
+            sharesFinalized == false,
+            "cannot issue more C3 after shares have been finalized"
+        );
         _mint(account, amount);
         shares[account] = shares[account].add(amount);
         emit Issued(account, amount);
     }
 
-    function lock() public onlyOwner {
-        isLocked = true;
+    event SharesFinalized();
+
+    function finalize() public onlyOwner {
+        sharesFinalized = true;
+        emit SharesFinalized();
     }
 
     function transfer(address recipient, uint256 amount)
@@ -152,8 +150,6 @@ contract C3 is ERC20, Ownable {
         backingToken.transfer(_msgSender(), bacToReceive);
     }
 
-    // TODO: Transfer function that handles withdrawn amount
-
     function bacBalance() public view returns (uint256) {
         return backingToken.balanceOf(address(this));
     }
@@ -199,16 +195,16 @@ contract C3 is ERC20, Ownable {
     event CompletelyFunded();
 
     function fund(uint256 amount) public isLive {
-        // TODO: fund function checks for extra funds (OPTIONAL)
         require(
             isFunded() == false,
-            "cannot fund a contract that is is already funded"
+            "cannot fund a contract that is is already completely funded"
         );
 
         uint256 remainingNeeded = remainingBackingNeededToFund();
         if (remainingNeeded <= amount) {
             totalAmountFunded = totalAmountFunded.add(remainingNeeded);
-            isLocked = true;
+            sharesFinalized = true;
+            emit SharesFinalized();
             emit Funded(_msgSender(), remainingNeeded);
             emit CompletelyFunded();
             backingToken.transferFrom(

@@ -239,9 +239,42 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
         expect(totalSupplyBefore.sub(totalSupplyAfter)).eq.BN(toBurn);
       });
+
+      it("does not allow burning when a cashout is available", async () => {
+        await c3.issue(acc[1], humanC3(100));
+        await fundC3ToPercent(50);
+
+        await truffleAssert.reverts(c3.burn(humanC3(1), { from: acc[1] }));
+
+        await c3.cashout({ from: acc[1] });
+        await c3.burn(humanC3(1), { from: acc[1] });
+      });
     });
 
     describe("cashout", () => {
+      it("can give info on the amount of c3/bac available to cashout", async () => {
+        await c3.issue(acc[1], humanC3(100));
+        await c3.issue(acc[2], humanC3(300));
+
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(0);
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(0);
+
+        await fundC3ToPercent(20);
+
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(humanC3(20));
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(humanBac(20));
+
+        await c3.cashout({ from: acc[1] });
+
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(0);
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(0);
+
+        await fundC3ToPercent(80);
+
+        expect(await c3.cashableC3(acc[1])).to.eq.BN(humanC3(60));
+        expect(await c3.withdrawableBac(acc[1])).to.eq.BN(humanBac(60));
+      });
+
       it("does NOT decrease shares when cashing out", async () => {
         const toIssue = humanC3(100);
         await c3.issue(acc[1], toIssue);
@@ -474,10 +507,16 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         expect(await c3.sharesFinalized()).is.true;
         truffleAssert.eventEmitted(tx, "SharesFinalized");
       });
-    });
 
-    it.skip("what does it do if someone tries burning when they have stuff available to cashout (particuarly after the contract is already funded)?", async () => {
-      expect.fail();
+      it("does not emit another SharesFinalized on fully funded if it has already been finalized", async () => {
+        await issueToEveryone(humanC3(100));
+        await c3.finalize();
+
+        const toFund = await c3.remainingBackingNeededToFund();
+        const tx = await fundC3(toFund);
+        expect(await c3.sharesFinalized()).is.true;
+        truffleAssert.eventNotEmitted(tx, "SharesFinalized");
+      });
     });
 
     describe("transfer", () => {

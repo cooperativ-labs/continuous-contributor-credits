@@ -45,12 +45,12 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
     const humanBac = (humanNumber: number): BN =>
       new BN(humanNumber).mul(new BN(10).pow(new BN(bacDec)));
 
-    const issueToEveryone = async (amountC2: BN | number): Promise<void> => {
+    const issueToEveryone = async (amountC3: BN | number): Promise<void> => {
       // don't issue to owner
       await Promise.all(
         Array(9)
           .fill(0)
-          .map(async (_, i) => await c3.issue(acc[i + 1], amountC2))
+          .map(async (_, i) => await c3.issue(acc[i + 1], amountC3))
       );
     };
 
@@ -122,19 +122,19 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
     describe("establish", () => {
       it("starts unestablished, which prevents issuance", async () => {
-        const freshC2 = await C3.new();
+        const freshC3 = await C3.new();
 
-        expect(await freshC2.isEstablished()).is.false;
-        await truffleAssert.reverts(freshC2.issue(acc[1], 1));
+        expect(await freshC3.isEstablished()).is.false;
+        await truffleAssert.reverts(freshC3.issue(acc[1], 1));
       });
 
       it("can be established", async () => {
-        const freshC2 = await C3.new();
-        await freshC2.establish(bac.address, agreementHash);
+        const freshC3 = await C3.new();
+        await freshC3.establish(bac.address, agreementHash);
 
-        expect(await freshC2.isEstablished()).is.true;
-        expect(await freshC2.totalSupply()).eq.BN(0);
-        expect(await bac.balanceOf(freshC2.address)).eq.BN(0);
+        expect(await freshC3.isEstablished()).is.true;
+        expect(await freshC3.totalSupply()).eq.BN(0);
+        expect(await bac.balanceOf(freshC3.address)).eq.BN(0);
       });
 
       it("cannot be established twice", async () => {
@@ -265,18 +265,18 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         await c3.cashout({ from: acc[1] });
 
         const totalSupplyAfter_1 = await c3.totalSupply();
-        const amountC2_1 = await c3.balanceOf(acc[1]);
+        const amountC3_1 = await c3.balanceOf(acc[1]);
         const amountBac_1 = await bac.balanceOf(acc[1]);
 
         await c3.cashout({ from: acc[1] });
         const totalSupplyAfter_2 = await c3.totalSupply();
-        const amountC2_2 = await c3.balanceOf(acc[1]);
+        const amountC3_2 = await c3.balanceOf(acc[1]);
         const amountBac_2 = await bac.balanceOf(acc[1]);
 
         expect(totalSupplyAfter_1).eq.BN(totalSupplyAfter_2);
-        expect(amountC2_1).eq.BN(amountC2_2);
+        expect(amountC3_1).eq.BN(amountC3_2);
         expect(amountBac_1).eq.BN(amountBac_2);
-        expect(amountC2_1).lt.BN(humanC3(100));
+        expect(amountC3_1).lt.BN(humanC3(100));
       });
 
       it("can be cashed out up to the proportion funded", async () => {

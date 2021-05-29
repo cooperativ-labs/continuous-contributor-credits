@@ -45,17 +45,15 @@ contract C3 is ERC20, Ownable {
 
     event Issued(address indexed account, uint256 c3Issued);
 
-    function issue(address account, uint256 amount)
-        public
-        onlyOwner
-        isLive
-    {
-        require(sharesFinalized == false, "cannot issue more C3 after shares have been finalized");
+    function issue(address account, uint256 amount) public onlyOwner isLive {
+        require(
+            sharesFinalized == false,
+            "cannot issue more C3 after shares have been finalized"
+        );
         _mint(account, amount);
         shares[account] = shares[account].add(amount);
         emit Issued(account, amount);
     }
-
 
     event SharesFinalized();
 

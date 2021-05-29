@@ -234,7 +234,7 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         expect(totalSupplyBefore.sub(totalSupplyAfter)).eq.BN(toBurn);
       });
 
-      it.only("does not allow burning when a cashout is available", async () => {
+      it("does not allow burning when a cashout is available", async () => {
         await c3.issue(acc[1], humanC3(100));
         await fundC3ToPercent(50);
 
@@ -247,8 +247,8 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
 
     describe("cashout", () => {
       it("can give info on the amount of c3/bac available to cashout", async () => {
-        await c3.issue(acc[1], 100);
-        await c3.issue(acc[2], 300);
+        await c3.issue(acc[1], humanC3(100));
+        await c3.issue(acc[2], humanC3(300));
 
         expect(await c3.cashableC3(acc[1])).to.eq.BN(0);
         expect(await c3.withdrawableBac(acc[1])).to.eq.BN(0);

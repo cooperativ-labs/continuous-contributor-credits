@@ -95,7 +95,7 @@ contract C3 is ERC20, Ownable {
     event Burned(address indexed account, uint256 c3Burned);
 
     function burn(uint256 amount) public isLive {
-
+        require(withdrawableBac(_msgSender()) == 0, 'burns are not allowed when a cashout is possible');
         uint256 associatedBacking = backingNeededFor(amount);
         _burn(_msgSender(), amount);
         shares[_msgSender()] = shares[_msgSender()].sub(amount);
@@ -142,11 +142,11 @@ contract C3 is ERC20, Ownable {
 
         uint256 c3ToCashout = cashableC3(_msgSender());
 
-        _transfer(_msgSender(), address(this), c3ToCashOut);
+        _transfer(_msgSender(), address(this), c3ToCashout);
         bacWithdrawn[_msgSender()] = bacWithdrawn[_msgSender()].add(
             bacToReceive
         );
-        emit CashedOut(_msgSender(), c3ToCashOut, bacToReceive);
+        emit CashedOut(_msgSender(), c3ToCashout, bacToReceive);
         backingToken.transfer(_msgSender(), bacToReceive);
     }
 

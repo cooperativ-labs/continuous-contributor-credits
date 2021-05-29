@@ -28,8 +28,6 @@ jobs:
       with:
         path: '**/node_modules'
         key: ${{ runner.os }}-modules-${{ hashFiles('**/yarn.lock') }}
-        restore-keys: |
-          ${{ runner.os }}-modules-
 
     # Install deps
     - name: Install Dependencies

@@ -7,7 +7,7 @@ import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
 contract C2 is ERC20, Ownable {
-    string public constant version = "cc v0.2.0";
+    string public constant version = "C3 v1.0.0";
 
     ERC20 public backingToken;
     using SafeMath for uint256;
@@ -29,7 +29,7 @@ contract C2 is ERC20, Ownable {
     mapping(address => uint256) public shares;
     mapping(address => uint256) public bacWithdrawn;
 
-    constructor() public ERC20("ContributorCredits", "C^2") {}
+    constructor() public ERC20("Continuous Contributor Credits", "C3") {}
 
     bool public isLocked = false;
     modifier isNotLocked() {
@@ -47,7 +47,7 @@ contract C2 is ERC20, Ownable {
         isEstablished = true;
     }
 
-    event Issued(address indexed account, uint256 c2Issued);
+    event Issued(address indexed account, uint256 c3Issued);
 
     function issue(address account, uint256 amount)
         public
@@ -92,7 +92,7 @@ contract C2 is ERC20, Ownable {
         return transfer(recipient, this.balanceOf(_msgSender()));
     }
 
-    event Burned(address indexed account, uint256 c2Burned);
+    event Burned(address indexed account, uint256 c3Burned);
 
     function burn(uint256 amount) public isLive {
         // TODO: Only allow burning down to amount withdrawn
@@ -107,7 +107,7 @@ contract C2 is ERC20, Ownable {
 
     event CashedOut(
         address indexed account,
-        uint256 c2CashedOut,
+        uint256 c3CashedOut,
         uint256 bacReceived
     );
 
@@ -135,13 +135,13 @@ contract C2 is ERC20, Ownable {
             );
         uint256 alreadyCashedC2 =
             shares[_msgSender()].sub(this.balanceOf(_msgSender()));
-        uint256 c2ToCashOut = cashableC2.sub(alreadyCashedC2);
+        uint256 c3ToCashOut = cashableC2.sub(alreadyCashedC2);
 
-        _transfer(_msgSender(), address(this), c2ToCashOut);
+        _transfer(_msgSender(), address(this), c3ToCashOut);
         bacWithdrawn[_msgSender()] = bacWithdrawn[_msgSender()].add(
             bacToReceive
         );
-        emit CashedOut(_msgSender(), c2ToCashOut, bacToReceive);
+        emit CashedOut(_msgSender(), c3ToCashOut, bacToReceive);
         backingToken.transfer(_msgSender(), bacToReceive);
     }
 

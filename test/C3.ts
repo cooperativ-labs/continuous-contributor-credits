@@ -502,10 +502,6 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
       });
     });
 
-    it.skip("what does it do if someone tries burning when they have stuff available to cashout (particuarly after the contract is already funded)?", async () => {
-      expect.fail();
-    });
-
     describe("transfer", () => {
       it("can transfer all tokens to a fresh address", async () => {
         const toIssue = humanC3(100);

@@ -6,8 +6,8 @@ import "openzeppelin-solidity/contracts/token/ERC20/IERC20.sol";
 import "openzeppelin-solidity/contracts/access/Ownable.sol";
 import "openzeppelin-solidity/contracts/math/SafeMath.sol";
 
-contract C2 is ERC20, Ownable {
-    string public constant version = "cc v0.2.0";
+contract C3 is ERC20, Ownable {
+    string public constant version = "C3 v1.0.0";
 
     ERC20 public backingToken;
     using SafeMath for uint256;
@@ -29,7 +29,7 @@ contract C2 is ERC20, Ownable {
     mapping(address => uint256) public shares;
     mapping(address => uint256) public bacWithdrawn;
 
-    constructor() public ERC20("ContributorCredits", "C^2") {}
+    constructor() public ERC20("Continuous Contributor Credits", "C3") {}
 
     bool public isLocked = false;
     modifier isNotLocked() {
@@ -47,7 +47,7 @@ contract C2 is ERC20, Ownable {
         isEstablished = true;
     }
 
-    event Issued(address indexed account, uint256 c2Issued);
+    event Issued(address indexed account, uint256 c3Issued);
 
     function issue(address account, uint256 amount)
         public
@@ -92,7 +92,7 @@ contract C2 is ERC20, Ownable {
         return transfer(recipient, this.balanceOf(_msgSender()));
     }
 
-    event Burned(address indexed account, uint256 c2Burned);
+    event Burned(address indexed account, uint256 c3Burned);
 
     function burn(uint256 amount) public isLive {
         // TODO: Only allow burning down to amount withdrawn
@@ -107,7 +107,7 @@ contract C2 is ERC20, Ownable {
 
     event CashedOut(
         address indexed account,
-        uint256 c2CashedOut,
+        uint256 c3CashedOut,
         uint256 bacReceived
     );
 
@@ -125,23 +125,23 @@ contract C2 is ERC20, Ownable {
             return;
         }
 
-        // at 100% funded, all C2 can be withdrawn. At n% funded, n% of C2 can be withdrawn.
+        // at 100% funded, all C3 can be withdrawn. At n% funded, n% of C3 can be withdrawn.
         // Proportion funded can be calculated (handling the decimal conversion using the totalAmountNeededToFund)
-        // At some level C2 is purely aesthetic. BAC is distributed soley based on actual amount of money give to the
+        // At some level C3 is purely aesthetic. BAC is distributed soley based on actual amount of money give to the
         // contract and proportion of share that each contributor has.
-        uint256 cashableC2 =
+        uint256 cashableC3 =
             shares[_msgSender()].mul(totalAmountFunded).div(
                 totalBackingNeededToFund()
             );
-        uint256 alreadyCashedC2 =
+        uint256 alreadyCashedC3 =
             shares[_msgSender()].sub(this.balanceOf(_msgSender()));
-        uint256 c2ToCashOut = cashableC2.sub(alreadyCashedC2);
+        uint256 c3ToCashOut = cashableC3.sub(alreadyCashedC3);
 
-        _transfer(_msgSender(), address(this), c2ToCashOut);
+        _transfer(_msgSender(), address(this), c3ToCashOut);
         bacWithdrawn[_msgSender()] = bacWithdrawn[_msgSender()].add(
             bacToReceive
         );
-        emit CashedOut(_msgSender(), c2ToCashOut, bacToReceive);
+        emit CashedOut(_msgSender(), c3ToCashOut, bacToReceive);
         backingToken.transfer(_msgSender(), bacToReceive);
     }
 
@@ -151,22 +151,14 @@ contract C2 is ERC20, Ownable {
         return backingToken.balanceOf(address(this));
     }
 
-    function backingNeededFor(uint256 amountC2) public view returns (uint256) {
+    function backingNeededFor(uint256 amountC3) public view returns (uint256) {
         if (bacBalance() == 0 || totalSupply() == 0) {
             return 0;
         }
 
         // The -1 +1 is to get the ceiling division, rather than the floor so that you always err on the side of having more backing
-        return amountC2.mul(bacBalance()).sub(1).div(totalSupply()).add(1);
+        return amountC3.mul(bacBalance()).sub(1).div(totalSupply()).add(1);
     }
-
-    //    function totalAmountPaidTo(address c2Holder) public view returns (uint256) {
-    //        if (balanceOf(c2Holder) == 0) {
-    //            return 0;
-    //        }
-    //        // tokens owned * proportion funded
-    //        // proportion funded = totalAmountFunded / totalBackingNeededToFund
-    //    }
 
     function totalBackingNeededToFund() public view returns (uint256) {
         if (totalSupply() == 0) {

@@ -1,4 +1,4 @@
-import { testBacDecimals } from "./C2";
+import { testBacDecimals } from "./C3";
 const BAC21 = artifacts.require("BackingToken21");
 const BAC6 = artifacts.require("BackingToken6");
 

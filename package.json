@@ -10,8 +10,9 @@
     "test": "truffle test",
     "lint": "prettier --check test migrations contracts",
     "fmt": "prettier --write test migrations contracts",
-    "generate-types": "typechain --target=truffle-v5 'build/contracts/{C2,BackingToken*}.json'",
-    "postinstall": "truffle compile && yarn generate-types"
+    "generate-types": "typechain --target=truffle-v5 'build/contracts/{C3,BackingToken*}.json'",
+    "postinstall": "truffle compile && yarn generate-types",
+    "build": "truffle compile"
   },
   "repository": {
     "type": "git",

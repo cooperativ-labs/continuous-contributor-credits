@@ -203,8 +203,10 @@ contract C3 is ERC20, Ownable {
         uint256 remainingNeeded = remainingBackingNeededToFund();
         if (remainingNeeded <= amount) {
             totalAmountFunded = totalAmountFunded.add(remainingNeeded);
-            sharesFinalized = true;
-            emit SharesFinalized();
+            if (sharesFinalized == false) {
+                sharesFinalized = true;
+                emit SharesFinalized();
+            }
             emit Funded(_msgSender(), remainingNeeded);
             emit CompletelyFunded();
             backingToken.transferFrom(

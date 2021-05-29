@@ -508,7 +508,7 @@ export async function testBacDecimals(backingToken: AnyBac, bacDec: number) {
         truffleAssert.eventEmitted(tx, "SharesFinalized");
       });
 
-      it.only("does not emit another SharesFinalized on fully funded if it has already been finalized", async () => {
+      it("does not emit another SharesFinalized on fully funded if it has already been finalized", async () => {
         await issueToEveryone(humanC3(100));
         await c3.finalize();
 

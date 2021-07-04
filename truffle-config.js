@@ -71,7 +71,7 @@ module.exports = {
       gas: 4000000,        // Ropsten has a lower block limit than mainnet
       timeoutBlocks: 200,  // # of blocks before a deployment times out  (minimum/default: 50)
       skipDryRun: true,     // Skip dry run before migrations? (default: false for public nets )
-      gasPrice: web3.utils.toWei('25', 'gwei')
+      gasPrice: web3.utils.toWei('40', 'gwei')
     },
     live: {
       provider: () => new HDWalletProvider(MAINNET_ACCOUNT_KEY, `https://mainnet.infura.io/v3/${INFURA_KEY}`),

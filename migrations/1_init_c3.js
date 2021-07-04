@@ -9,9 +9,9 @@ module.exports = function (deployer, network, accounts) {
   if (network === "live" || network === "live-fork") {
     return deployer.deploy(C3);
   } else if (network === "ropsten") {
-    deployer.deploy(BackingToken, accounts[0]);
-    deployer.deploy(TestDAI, accounts[0]);
-    deployer.deploy(TestUSDC, accounts[0]);
+    // deployer.deploy(BackingToken, accounts[0]);
+    // deployer.deploy(TestDAI, accounts[0]);
+    // deployer.deploy(TestUSDC, accounts[0]);
     return deployer.deploy(C3);
   } else {
     deployer.deploy(BackingToken, accounts[0]);
